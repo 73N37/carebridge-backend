@@ -23,13 +23,21 @@ public class EventType extends BaseEntity {
     @Column(nullable = false)
     private String name; 
 
-
+    @NotBlank
+    @Pattern(regexp = "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$", message = "Must be a valid hex color code")
+    @Column(nullable = false)
+    private String colorHex;
 
     public EventType() {
     }
 
     public EventType(String name) {
         this.name = name;
+    }
+
+    public EventType(String name, String colorHex) {
+        this.name = name;
+        this.colorHex = colorHex;
     }
 
     @Override

@@ -20,6 +20,9 @@ public class Utils {
 
     public static String getPropertyValue(String propName, String resourceName) {
         try (InputStream is = Utils.class.getClassLoader().getResourceAsStream(resourceName)) {
+            if (is == null) {
+                throw new ApiRuntimeException(500, String.format("Could not find resource %s", resourceName));
+            }
             Properties prop = new Properties();
             prop.load(is);
 
@@ -30,7 +33,6 @@ public class Utils {
                 throw new ApiRuntimeException(500, String.format("Property %s not found in %s", propName, resourceName));
             }
         } catch (IOException ex) {
-            ex.printStackTrace();
             throw new ApiRuntimeException(500, String.format("Could not read property %s. Did you remember to build the project with MAVEN?", propName));
         }
     }
@@ -38,7 +40,7 @@ public class Utils {
     public static String convertToJsonMessage(Context ctx, String property, String message) {
         Map<String, String> msgMap = new HashMap<>();
         msgMap.put(property, message);
-        msgMap.put("status", String.valueOf(ctx.status()));
+        msgMap.put("status", String.valueOf(ctx.status().getCode()));
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             return objectMapper.writeValueAsString(msgMap);
