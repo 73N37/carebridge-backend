@@ -3,7 +3,7 @@ package com.carebridge.dao.impl;
 import com.carebridge.config.HibernateConfig;
 import com.carebridge.dao.IDAO;
 import com.carebridge.entities.User;
-import com.carebridge.entities.enums.Role;
+import com.carebridge.entities.Role;
 import com.carebridge.exceptions.ApiRuntimeException;
 import com.carebridge.exceptions.ValidationException;
 import jakarta.persistence.EntityManager;

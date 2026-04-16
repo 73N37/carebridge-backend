@@ -1,4 +1,4 @@
-package com.carebridge.entities.enums;
+package com.carebridge.entities;
 
 import io.javalin.security.RouteRole;
 

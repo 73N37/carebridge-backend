@@ -3,7 +3,7 @@ package dao;
 import com.carebridge.config.HibernateConfig;
 import com.carebridge.dao.impl.UserDAO;
 import com.carebridge.entities.User;
-import com.carebridge.entities.enums.Role;
+import com.carebridge.entities.Role;
 import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.*;
 

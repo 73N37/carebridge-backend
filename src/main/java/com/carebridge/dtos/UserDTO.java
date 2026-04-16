@@ -1,6 +1,6 @@
 package com.carebridge.dtos;
 
-import com.carebridge.entities.enums.Role;
+import com.carebridge.entities.Role;
 import java.util.Objects;
 
 public class UserDTO {

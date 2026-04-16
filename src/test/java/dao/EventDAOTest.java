@@ -7,7 +7,7 @@ import com.carebridge.dao.impl.UserDAO;
 import com.carebridge.entities.Event;
 import com.carebridge.entities.EventType;
 import com.carebridge.entities.User;
-import com.carebridge.entities.enums.Role;
+import com.carebridge.Role;
 import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.*;
 

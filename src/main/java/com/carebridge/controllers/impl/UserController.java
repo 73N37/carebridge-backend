@@ -10,7 +10,7 @@ import com.carebridge.dtos.LinkResidentsRequest;
 import com.carebridge.dtos.UserDTO;
 import com.carebridge.entities.Resident;
 import com.carebridge.entities.User;
-import com.carebridge.entities.enums.Role;
+import com.carebridge.entities.Role;
 import com.carebridge.exceptions.ApiRuntimeException;
 import com.carebridge.services.mappers.UserMapper;
 import io.javalin.http.Context;

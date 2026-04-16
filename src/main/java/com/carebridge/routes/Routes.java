@@ -2,7 +2,7 @@ package com.carebridge.routes;
 
 import com.carebridge.controllers.impl.JournalEntryController;
 import com.carebridge.controllers.impl.UserController;
-import com.carebridge.entities.enums.Role;
+import com.carebridge.entities.Role;
 import io.javalin.apibuilder.EndpointGroup;
 
 import static io.javalin.apibuilder.ApiBuilder.*;
