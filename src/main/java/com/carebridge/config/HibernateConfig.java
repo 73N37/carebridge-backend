@@ -2,7 +2,6 @@ package com.carebridge.config;
 
 
 import com.carebridge.entities.*;
-import com.carebridge.entities.enums.Role;
 import com.carebridge.utils.Utils;
 import jakarta.persistence.EntityManagerFactory;
 import org.hibernate.SessionFactory;

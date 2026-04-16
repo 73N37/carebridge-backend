@@ -1,6 +1,5 @@
 package com.carebridge.config;
 
-import com.carebridge.config.HibernateConfig;
 import com.carebridge.crud.api.JavalinUniversalController;
 import com.carebridge.crud.logic.DynamicCrudManager;
 import com.carebridge.controllers.security.AccessController;
