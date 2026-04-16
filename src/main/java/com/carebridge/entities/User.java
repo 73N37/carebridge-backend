@@ -4,8 +4,9 @@ import com.carebridge.crud.annotations.CrudResource;
 import com.carebridge.crud.annotations.ExcludeFromDTO;
 import com.carebridge.crud.annotations.ExcludeFromMeta;
 import com.carebridge.crud.data.core.BaseEntity;
-import com.carebridge.entities.Role;
 import com.carebridge.entities.security.ISecurityUser;
+import com.carebridge.enums.Role;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

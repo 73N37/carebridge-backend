@@ -1,6 +1,6 @@
 package com.carebridge.dtos;
 
-import com.carebridge.entities.Role;
+import com.carebridge.enums.Role;
 
 public class RegisterUserDTO {
     private String name;

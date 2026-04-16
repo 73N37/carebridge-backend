@@ -1,7 +1,7 @@
 package com.carebridge.dao.security;
 
 import com.carebridge.entities.User;
-import com.carebridge.entities.Role;
+import com.carebridge.enums.Role;
 import com.carebridge.exceptions.ApiRuntimeException;
 import com.carebridge.exceptions.ValidationException;
 import jakarta.persistence.EntityManager;

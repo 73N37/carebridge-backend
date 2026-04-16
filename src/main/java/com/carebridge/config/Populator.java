@@ -2,7 +2,8 @@ package com.carebridge.config;
 
 import com.carebridge.entities.EventType;
 import com.carebridge.entities.User;
-import com.carebridge.entities.Role;
+import com.carebridge.enums.Role;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.EntityTransaction;

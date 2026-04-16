@@ -1,7 +1,8 @@
 package com.carebridge.dtos;
 
-import com.carebridge.entities.Role;
 import java.util.Objects;
+
+import com.carebridge.enums.Role;
 
 public class UserDTO {
     private Long id;

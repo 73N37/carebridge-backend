@@ -1,7 +1,8 @@
 package com.carebridge.controllers.security;
 
 import com.carebridge.dtos.JwtUserDTO;
-import com.carebridge.entities.Role;
+import com.carebridge.enums.Role;
+
 import io.javalin.http.Context;
 import io.javalin.http.UnauthorizedResponse;
 import io.javalin.security.RouteRole;

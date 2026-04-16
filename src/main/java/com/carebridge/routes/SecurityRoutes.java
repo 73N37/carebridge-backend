@@ -1,7 +1,8 @@
 package com.carebridge.routes;
 
 import com.carebridge.controllers.security.SecurityController;
-import com.carebridge.entities.Role;
+import com.carebridge.enums.Role;
+
 import io.javalin.apibuilder.EndpointGroup;
 
 import static io.javalin.apibuilder.ApiBuilder.*;
