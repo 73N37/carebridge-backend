@@ -12,14 +12,15 @@ public class UserRoute {
 
     public EndpointGroup getRoutes() {
         return () -> {
-            get("/", controller::readAll, Role.ADMIN);
-            get("/{id}", controller::read, Role.ADMIN);
+            get("me", controller::me, Role.USER, Role.ADMIN, Role.CAREWORKER, Role.GUARDIAN);
+            get("", controller::readAll, Role.ADMIN);
+            get("{id}", controller::read, Role.ADMIN);
 
 
-            post("/", controller::create, Role.ADMIN);
-            put("/{id}", controller::update, Role.ADMIN);
-            delete("/{id}", controller::delete, Role.ADMIN);
-            post("/{id}/link-residents", controller::linkResidents, Role.ADMIN);
+            post("", controller::create, Role.ADMIN);
+            put("{id}", controller::update, Role.ADMIN);
+            delete("{id}", controller::delete, Role.ADMIN);
+            post("{id}/link-residents", controller::linkResidents, Role.ADMIN);
         };
     }
 }

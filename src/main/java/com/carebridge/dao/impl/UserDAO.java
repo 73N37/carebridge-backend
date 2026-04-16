@@ -34,7 +34,13 @@ public class UserDAO implements IDAO<User, Long> {
     @Override
     public User read(Long id) {
         try (var em = em()) {
-            return em.find(User.class, id);
+            var list = em.createQuery(
+                "SELECT DISTINCT u FROM User u " +
+                "LEFT JOIN FETCH u.residents " +
+                "WHERE u.id = :id", User.class)
+                .setParameter("id", id)
+                .getResultList();
+            return list.isEmpty() ? null : list.get(0);
         } catch (Exception e) {
             logger.error("Error reading user {}", id, e);
             throw new ApiRuntimeException(500, "Error reading user: " + e.getMessage());

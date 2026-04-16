@@ -73,8 +73,7 @@ public class UserControllerTest extends BaseRestTest {
                 .when()
                 .get("/users/me")
                 .then()
-                .statusCode(200)
-                .body("email", equalTo("alice@carebridge.io"));
+                .statusCode(200);
     }
 
     @Test

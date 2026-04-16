@@ -10,10 +10,14 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.service.ServiceRegistry;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Properties;
 
 public class HibernateConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(HibernateConfig.class);
     private static EntityManagerFactory emf;
     private static EntityManagerFactory emfTest;
     private static Boolean isTest = false;
@@ -43,7 +47,6 @@ public class HibernateConfig {
     private static void getAnnotationConfiguration(Configuration configuration) {
         configuration.addAnnotatedClass(com.carebridge.crud.data.core.BaseEntity.class);
         configuration.addAnnotatedClass(User.class);
-        configuration.addAnnotatedClass(Role.class);
         configuration.addAnnotatedClass(Event.class);
         configuration.addAnnotatedClass(EventType.class);
         configuration.addAnnotatedClass(JournalEntry.class);
@@ -116,10 +119,27 @@ public class HibernateConfig {
     }
 
     private static Properties setTestProperties(Properties props) {
-        props.put("hibernate.connection.driver_class", "org.testcontainers.jdbc.ContainerDatabaseDriver");
-        props.put("hibernate.connection.url", "jdbc:tc:postgresql:15.3-alpine3.18:///test_db");
-        props.put("hibernate.connection.username", "postgres");
-        props.put("hibernate.connection.password", "postgres");
+        // Try Docker first if requested via system property, otherwise check .env, otherwise fallback to H2
+        String useH2Env = Utils.getPropertyValue("USE_H2", "application.properties");
+        boolean forceDocker = "true".equalsIgnoreCase(System.getProperty("test.docker"));
+        boolean useH2 = "true".equalsIgnoreCase(useH2Env) || (!forceDocker);
+        
+        if (useH2) {
+            log.info("🧪 Using H2 In-Memory Database for testing");
+            props.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+            props.put("hibernate.connection.driver_class", "org.h2.Driver");
+            props.put("hibernate.connection.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");
+            props.put("hibernate.connection.username", "sa");
+            props.put("hibernate.connection.password", "");
+        } else {
+            log.info("🐳 Using PostgreSQL via Testcontainers/Docker");
+            props.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
+            props.put("hibernate.connection.driver_class", "org.testcontainers.jdbc.ContainerDatabaseDriver");
+            props.put("hibernate.connection.url", "jdbc:tc:postgresql:15.3-alpine3.18:///test_db");
+            props.put("hibernate.connection.username", "postgres");
+            props.put("hibernate.connection.password", "postgres");
+        }
+        
         props.put("hibernate.archive.autodetection", "class");
         props.put("hibernate.show_sql", "true");
         props.put("hibernate.hbm2ddl.auto", "create-drop");

@@ -10,7 +10,6 @@ import io.javalin.Javalin;
 import io.javalin.apibuilder.ApiBuilder;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
-import io.javalin.json.JavalinJackson;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,14 +22,16 @@ public class ApplicationConfig {
     private static final String frontEndOrigin = "http://localhost:5173";
     private static int count = 1;
 
-    // 🚀 UNIVERSAL CRUD INITIALIZATION
-    private static final EntityManager em = HibernateConfig.getEntityManagerFactory().createEntityManager();
-    private static final DynamicCrudManager crudManager = new DynamicCrudManager(em);
-    private static final JavalinUniversalController universalController = new JavalinUniversalController(crudManager);
+    private static DynamicCrudManager crudManager;
+    private static JavalinUniversalController universalController;
 
-    static {
-        // Discover entities in the project
-        crudManager.discoverAndRegister("com.carebridge.entities");
+    private static synchronized void initializeUniversalCrud() {
+        if (crudManager == null) {
+            EntityManager em = HibernateConfig.getEntityManagerFactory().createEntityManager();
+            crudManager = new DynamicCrudManager(em);
+            crudManager.discoverAndRegister("com.carebridge.entities");
+            universalController = new JavalinUniversalController(crudManager);
+        }
     }
 
     public static void configuration(JavalinConfig config) {
@@ -43,6 +44,7 @@ public class ApplicationConfig {
             routes.getRoutes().addEndpoints();
             
             // 🌐 UNIVERSAL CRUD ROUTES (v3)
+            initializeUniversalCrud();
             ApiBuilder.path("v3", () -> {
                 ApiBuilder.get("metadata", universalController::getMetadata);
                 ApiBuilder.path("{resource}", () -> {
@@ -57,9 +59,7 @@ public class ApplicationConfig {
             });
         });
 
-        config.jsonMapper(new JavalinJackson().updateMapper(mapper -> {
-            mapper = new Utils().getObjectMapper();
-        }));
+        config.jsonMapper(new io.javalin.json.JavalinJackson(new Utils().getObjectMapper(), false));
     }
 
     public static Javalin startServer(int port) {
