@@ -117,21 +117,19 @@ Once running, the API will be available at:
 
 ## 🧪 Running Tests
 
-The project includes a comprehensive suite of RESTful API tests. By default, they use an **H2 In-Memory Database** for speed and environment compatibility (no Docker required).
+The project includes a comprehensive suite of RESTful API tests. They use **Testcontainers** to spin up a temporary **PostgreSQL** instance in Docker, ensuring tests run against a production-like environment.
 
-To run all tests:
+### 1. Requirements for Testing
+- **Docker**: Must be running on your machine.
+
+### 2. Run All Tests
 ```bash
 mvn clean test
 ```
 
-To run a specific test class:
-```bash
-mvn test "-Dtest=restTest.UserControllerTest"
-```
-
 The tests will automatically:
 1. Start a Javalin server on port 7070.
-2. Initialize an H2 database.
+2. Spin up a PostgreSQL container via Testcontainers.
 3. Populate it with initial data.
 4. Run 50+ REST API scenarios.
 5. Generate a JaCoCo coverage report in `target/site/jacoco/index.html`.
