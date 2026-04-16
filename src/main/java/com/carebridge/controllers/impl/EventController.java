@@ -112,11 +112,11 @@ public class EventController implements IController<Event, Long> {
 
     private Long extractUserIdFromToken(Object tokenUser) {
         if (tokenUser instanceof JwtUserDTO ju) {
-            var u = userDAO.readByEmail(ju.getUsername());
+            var u = userDAO.readByEmail(ju.username());
             return u != null ? u.getId() : null;
         }
         if (tokenUser instanceof com.carebridge.dtos.UserDTO du) {
-            return du.getId();
+            return du.id();
         }
         return null;
     }
@@ -126,17 +126,17 @@ public class EventController implements IController<Event, Long> {
     public void create(Context ctx) {
         try {
             var dto = ctx.bodyAsClass(EventDTO.class);
-            if (dto.getTitle() == null || dto.getTitle().isBlank())
+            if (dto.title() == null || dto.title().isBlank())
                 throw new ApiRuntimeException(400, "title required");
-            if (dto.getStartAt() == null) throw new ApiRuntimeException(400, "startAt required");
-            if (dto.getStartAt().isBefore(Instant.now()))
+            if (dto.startAt() == null) throw new ApiRuntimeException(400, "startAt required");
+            if (dto.startAt().isBefore(Instant.now()))
                 throw new ApiRuntimeException(400, "startAt must be in future");
-            if (dto.getEventTypeId() == null) throw new ApiRuntimeException(400, "eventTypeId required");
+            if (dto.eventTypeId() == null) throw new ApiRuntimeException(400, "eventTypeId required");
 
             var tokenUser = ctx.attribute("user");
             String email = null;
-            if (tokenUser instanceof JwtUserDTO ju) email = ju.getUsername();
-            else if (tokenUser instanceof com.carebridge.dtos.UserDTO du) email = du.getEmail();
+            if (tokenUser instanceof JwtUserDTO ju) email = ju.username();
+            else if (tokenUser instanceof com.carebridge.dtos.UserDTO du) email = du.email();
             else if (tokenUser != null) email = tokenUser.toString();
 
             if (email == null) throw new ApiRuntimeException(401, "Unauthorized");
@@ -144,10 +144,10 @@ public class EventController implements IController<Event, Long> {
             User creator = userDAO.readByEmail(email);
             if (creator == null) throw new ApiRuntimeException(401, "Unauthorized");
 
-            EventType et = eventTypeDAO.read(dto.getEventTypeId());
+            EventType et = eventTypeDAO.read(dto.eventTypeId());
             if (et == null) throw new ApiRuntimeException(404, "EventType not found");
 
-            Event e = new Event(dto.getTitle(), dto.getDescription(), dto.getStartAt(), dto.isShowOnBoard(), creator, et);
+            Event e = new Event(dto.title(), dto.description(), dto.startAt(), dto.showOnBoard(), creator, et);
             var created = eventDAO.create(e);
             ctx.status(201).json(EventMapper.toDTO(created));
         } catch (ApiRuntimeException e) {
@@ -165,12 +165,12 @@ public class EventController implements IController<Event, Long> {
             var dto = ctx.bodyAsClass(EventDTO.class);
 
             Event patch = new Event();
-            patch.setTitle(dto.getTitle());
-            patch.setDescription(dto.getDescription());
-            patch.setStartAt(dto.getStartAt());
-            patch.setShowOnBoard(dto.isShowOnBoard());
-            if (dto.getEventTypeId() != null) {
-                EventType et = eventTypeDAO.read(dto.getEventTypeId());
+            patch.setTitle(dto.title());
+            patch.setDescription(dto.description());
+            patch.setStartAt(dto.startAt());
+            patch.setShowOnBoard(dto.showOnBoard());
+            if (dto.eventTypeId() != null) {
+                EventType et = eventTypeDAO.read(dto.eventTypeId());
                 if (et == null) throw new ApiRuntimeException(404, "EventType not found");
                 patch.setEventType(et);
             }
@@ -238,9 +238,9 @@ public class EventController implements IController<Event, Long> {
             var tokenUser = ctx.attribute("user");
             String email = null;
             if (tokenUser instanceof JwtUserDTO ju) {
-                email = ju.getUsername();
+                email = ju.username();
             } else if (tokenUser instanceof com.carebridge.dtos.UserDTO du) {
-                email = du.getEmail();
+                email = du.email();
             }
 
             if (email == null) throw new ApiRuntimeException(401, "Unauthorized");
@@ -266,9 +266,9 @@ public class EventController implements IController<Event, Long> {
             var tokenUser = ctx.attribute("user");
             String email = null;
             if (tokenUser instanceof JwtUserDTO ju) {
-                email = ju.getUsername();
+                email = ju.username();
             } else if (tokenUser instanceof com.carebridge.dtos.UserDTO du) {
-                email = du.getEmail();
+                email = du.email();
             }
 
             if (email == null) throw new ApiRuntimeException(401, "Unauthorized");

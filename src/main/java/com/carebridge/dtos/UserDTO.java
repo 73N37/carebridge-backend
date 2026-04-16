@@ -1,77 +1,22 @@
 package com.carebridge.dtos;
 
-import java.util.Objects;
 import com.carebridge.enums.Role;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class UserDTO {
-    private Long id;
-    private String name;
-    private String email;
-    private Role role;
-
-    private String displayName;
-    private String displayEmail;
-    private String displayPhone;
-    private String internalEmail;
-    private String internalPhone;
-
+public record UserDTO(
+    Long id,
+    String name,
+    String email,
+    Role role,
+    String displayName,
+    String displayEmail,
+    String displayPhone,
+    String internalEmail,
+    String internalPhone,
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private String password;
-
-    public UserDTO() {}
-
-    public UserDTO(Long id, String name, String email, Role role, String displayName, String displayEmail, String displayPhone, String internalEmail, String internalPhone, String password) {
-        this.id = id;
-        this.name = name;
-        this.email = email;
-        this.role = role;
-        this.displayName = displayName;
-        this.displayEmail = displayEmail;
-        this.displayPhone = displayPhone;
-        this.internalEmail = internalEmail;
-        this.internalPhone = internalPhone;
-        this.password = password;
-    }
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public Role getRole() { return role; }
-    public void setRole(Role role) { this.role = role; }
-    public String getDisplayName() { return displayName; }
-    public void setDisplayName(String displayName) { this.displayName = displayName; }
-    public String getDisplayEmail() { return displayEmail; }
-    public void setDisplayEmail(String displayEmail) { this.displayEmail = displayEmail; }
-    public String getDisplayPhone() { return displayPhone; }
-    public void setDisplayPhone(String displayPhone) { this.displayPhone = displayPhone; }
-    public String getInternalEmail() { return internalEmail; }
-    public void setInternalEmail(String internalEmail) { this.internalEmail = internalEmail; }
-    public String getInternalPhone() { return internalPhone; }
-    public void setInternalPhone(String internalPhone) { this.internalPhone = internalPhone; }
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof UserDTO userDTO)) return false;
-        return Objects.equals(id, userDTO.id) && Objects.equals(name, userDTO.name) && Objects.equals(email, userDTO.email) && role == userDTO.role;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, name, email, role);
-    }
-
-    @Override
-    public String toString() {
-        return "UserDTO{" + "id=" + id + ", name='" + name + '\'' + ", email='" + email + '\'' + ", role=" + role + '}';
-    }
-
+    String password
+) {
+    // Static builder-like method if needed, or just use constructor
     public static UserDTOBuilder builder() {
         return new UserDTOBuilder();
     }

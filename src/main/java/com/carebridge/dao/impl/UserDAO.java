@@ -16,6 +16,7 @@ import java.util.List;
 public class UserDAO implements IDAO<User, Long> {
 
     private static final Logger logger = LoggerFactory.getLogger(UserDAO.class);
+    private static final EntityManagerFactory emf = HibernateConfig.getEntityManagerFactory();
     private static UserDAO instance;
 
     private UserDAO() {
@@ -27,19 +28,13 @@ public class UserDAO implements IDAO<User, Long> {
     }
 
     private EntityManager em() {
-        return HibernateConfig.getEntityManagerFactory().createEntityManager();
+        return emf.createEntityManager();
     }
 
     @Override
     public User read(Long id) {
         try (var em = em()) {
-            var list = em.createQuery(
-                "SELECT DISTINCT u FROM User u " +
-                "LEFT JOIN FETCH u.residents " +
-                "WHERE u.id = :id", User.class)
-                .setParameter("id", id)
-                .getResultList();
-            return list.isEmpty() ? null : list.get(0);
+            return em.find(User.class, id);
         } catch (Exception e) {
             logger.error("Error reading user {}", id, e);
             throw new ApiRuntimeException(500, "Error reading user: " + e.getMessage());

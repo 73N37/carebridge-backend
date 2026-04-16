@@ -1,85 +1,41 @@
 package restTest;
 
-import com.carebridge.config.ApplicationConfig;
-import com.carebridge.config.HibernateConfig;
-import com.carebridge.config.Populator;
-import io.javalin.Javalin;
-import io.javalin.http.ContentType;
-import io.restassured.RestAssured;
 import org.junit.jupiter.api.*;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
-import static org.hamcrest.Matchers.is;
 
-    @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-    public class EventTypeTest extends BaseRestTest {
-
-        private static String authToken;
-        private static String adminAuthToken;
-
-        @BeforeAll
-        public void setupLocal() {
-            authToken = userToken;
-            adminAuthToken = adminToken;
-        }
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class EventTypeTest extends BaseRestTest {
 
     private static int createdEventTypeId;
 
-    // ---------------------------
-    // GET /eventtypes
-    // ---------------------------
     @Test
-    @Order(10)
-    public void testReadAllEventTypes() {
-        given()
-                .header("Authorization", "Bearer " + authToken) // ANYONE role allows USER token
-                .when()
-                .get("/event-types")
-                .then()
-                .statusCode(200)
-                .body("size()", greaterThanOrEqualTo(0));
-    }
-
-    // ---------------------------
-    // POST /eventtypes (ADMIN required)
-    // ---------------------------
-    @Test
-    @Order(11)
+    @Order(1)
     public void testCreateEventType() {
+        java.util.Map<String, Object> payload = java.util.Map.of(
+            "name", "Test Type " + System.currentTimeMillis(),
+            "colorHex", "#ff00ff"
+        );
 
-        String payload = """
-    {
-        "name": "New Test Event Type",
-        "colorHex": "#1A2B3C"
-    }
-    """;
-
-        createdEventTypeId =
-                given()
-                        .header("Authorization", "Bearer " + adminAuthToken) // Must use Admin token
-                        .contentType(ContentType.JSON)
-                        .body(payload)
-                        .when()
-                        .post("/event-types")
-                        .then()
-                        .statusCode(201)
-                        .body("name", equalTo("New Test Event Type"))
-                        .extract().path("id");
-
-        Assertions.assertTrue(createdEventTypeId > 0);
+        createdEventTypeId = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(io.javalin.http.ContentType.JSON)
+                .body(payload)
+                .when()
+                .post("/event-types")
+                .then()
+                .statusCode(201)
+                .body("name", startsWith("Test Type"))
+                .extract().path("id");
     }
 
-    // ---------------------------
-    // GET /eventtypes/{id}
-    // ---------------------------
     @Test
-    @Order(12)
-    public void testReadEventTypeById() {
-        // Read the newly created ID to ensure it exists
+    @Order(2)
+    public void testReadEventType() {
         given()
-                .header("Authorization", "Bearer " + authToken) // ANYONE role allows USER token
+                .header("Authorization", "Bearer " + adminToken)
                 .when()
                 .get("/event-types/" + createdEventTypeId)
                 .then()
@@ -87,41 +43,32 @@ import static org.hamcrest.Matchers.is;
                 .body("id", equalTo(createdEventTypeId));
     }
 
-    // ---------------------------
-    // PUT /eventtypes/{id} (ADMIN required)
-    // ---------------------------
     @Test
-    @Order(13)
+    @Order(3)
     public void testUpdateEventType() {
-
-        String updateJson = """
-    {
-        "name": "Urgent Updated Type"
-    }
-    """;
+        java.util.Map<String, Object> payload = java.util.Map.of(
+            "colorHex", "#000000"
+        );
 
         given()
-                .header("Authorization", "Bearer " + adminAuthToken) // Must use Admin token
-                .contentType(ContentType.JSON)
-                .body(updateJson)
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(io.javalin.http.ContentType.JSON)
+                .body(payload)
                 .when()
                 .put("/event-types/" + createdEventTypeId)
                 .then()
                 .statusCode(200)
-                .body("name", equalTo("Urgent Updated Type"));
+                .body("colorHex", equalTo("#000000"));
     }
 
-    // ---------------------------
-    // DELETE /eventtypes/{id} (ADMIN required)
-    // ---------------------------
     @Test
-    @Order(14)
+    @Order(4)
     public void testDeleteEventType() {
         given()
-                .header("Authorization", "Bearer " + adminAuthToken) // Must use Admin token
+                .header("Authorization", "Bearer " + adminToken)
                 .when()
                 .delete("/event-types/" + createdEventTypeId)
                 .then()
-                .statusCode(anyOf(is(200), is(204))); // 200/204 are common for successful delete
+                .statusCode(anyOf(is(200), is(204)));
     }
 }

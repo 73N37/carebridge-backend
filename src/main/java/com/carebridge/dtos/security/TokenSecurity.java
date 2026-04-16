@@ -64,11 +64,11 @@ public class TokenSecurity implements ITokenSecurity {
     @Override
     public String createToken(JwtUserDTO user, String issuer, String expireMillis, String secret) {
         try {
-            String rolesCsv = String.join(",", user.getRoles());
+            String rolesCsv = String.join(",", user.roles());
             var claims = new JWTClaimsSet.Builder()
-                    .subject(user.getUsername())
+                    .subject(user.username())
                     .issuer(issuer)
-                    .claim("username", user.getUsername())
+                    .claim("username", user.username())
                     .claim("roles", rolesCsv)
                     .expirationTime(new Date(new Date().getTime() + Long.parseLong(expireMillis)))
                     .build();

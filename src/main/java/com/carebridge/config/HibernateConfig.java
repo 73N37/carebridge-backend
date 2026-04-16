@@ -23,16 +23,7 @@ public class HibernateConfig {
     }
 
     public static void setTest(Boolean test) {
-        if (isTest.equals(test)) return;
         isTest = test;
-        if (emf != null) {
-            emf.close();
-            emf = null;
-        }
-        if (emfTest != null) {
-            emfTest.close();
-            emfTest = null;
-        }
     }
 
     public static EntityManagerFactory getEntityManagerFactory() {

@@ -7,8 +7,7 @@ import com.carebridge.entities.User;
 import java.util.Set;
 
 public final class UserMapper {
-    private UserMapper() {
-    }
+    private UserMapper() {}
 
     public static UserDTO toDTO(User u) {
         if (u == null) return null;
@@ -28,20 +27,19 @@ public final class UserMapper {
     public static User toEntity(UserDTO dto) {
         if (dto == null) return null;
         User u = new User();
-        u.setName(dto.getName());
-        u.setEmail(dto.getEmail());
-        u.setRole(dto.getRole());
-        u.setDisplayName(dto.getDisplayName());
-        u.setDisplayEmail(dto.getDisplayEmail());
-        u.setDisplayPhone(dto.getDisplayPhone());
-        u.setInternalEmail(dto.getInternalEmail());
-        u.setInternalPhone(dto.getInternalPhone());
-        if (dto.getPassword() != null) {
-            u.setPassword(dto.getPassword());
+        u.setName(dto.name());
+        u.setEmail(dto.email());
+        u.setRole(dto.role());
+        u.setDisplayName(dto.displayName());
+        u.setDisplayEmail(dto.displayEmail());
+        u.setDisplayPhone(dto.displayPhone());
+        u.setInternalEmail(dto.internalEmail());
+        u.setInternalPhone(dto.internalPhone());
+        if (dto.password() != null) {
+            u.setPassword(dto.password());
         }
         return u;
     }
-
 
     public static JwtUserDTO toJwt(User u) {
         if (u == null) return null;

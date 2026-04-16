@@ -34,7 +34,7 @@ public class JournalEntryController implements IController<JournalEntry, Long>
         } catch (IllegalArgumentException e) {
             ctx.status(400).result(e.getMessage());
         } catch (Exception e) {
-            logger.error("Internal server error", e);
+            logger.error("Error", e);
             ctx.status(500).result("Internal server error");
         }
     }
@@ -43,14 +43,21 @@ public class JournalEntryController implements IController<JournalEntry, Long>
     public void create(Context ctx) {
         try {
             Long journalId = Long.parseLong(ctx.pathParam("journalId"));
-            CreateJournalEntryRequestDTO requestDTO = ctx.bodyAsClass(CreateJournalEntryRequestDTO.class);
-            requestDTO.setJournalId(journalId);
+            CreateJournalEntryRequestDTO body = ctx.bodyAsClass(CreateJournalEntryRequestDTO.class);
+            // Re-create record with path ID
+            CreateJournalEntryRequestDTO requestDTO = new CreateJournalEntryRequestDTO(
+                journalId, 
+                body.authorUserId(), 
+                body.title(), 
+                body.content(), 
+                body.entryType(), 
+                body.riskAssessment()
+            );
 
-            //Hentning af User er taget fra EventController
             var tokenUser = ctx.attribute("user");
             String email = null;
-            if (tokenUser instanceof JwtUserDTO ju) email = ju.getUsername();
-            else if (tokenUser instanceof com.carebridge.dtos.UserDTO du) email = du.getEmail();
+            if (tokenUser instanceof JwtUserDTO ju) email = ju.username();
+            else if (tokenUser instanceof com.carebridge.dtos.UserDTO du) email = du.email();
             else if (tokenUser != null) email = tokenUser.toString();
 
             if (email == null) throw new ApiRuntimeException(401, "Could not find user from token");
@@ -62,22 +69,22 @@ public class JournalEntryController implements IController<JournalEntry, Long>
             }
 
             // --- 1. Fetch Journal and Author ---
-            Journal journal = journalDAO.read(requestDTO.getJournalId());
+            Journal journal = journalDAO.read(requestDTO.journalId());
             if (journal == null) {
-                throw new IllegalArgumentException("Journal not found with ID: " + requestDTO.getJournalId());
+                throw new IllegalArgumentException("Journal not found with ID: " + requestDTO.journalId());
             }
 
             // --- 2. Validate Required Input ---
-            if (requestDTO.getTitle() == null || requestDTO.getTitle().isBlank()) {
+            if (requestDTO.title() == null || requestDTO.title().isBlank()) {
                 throw new IllegalArgumentException("Title is required.");
             }
-            if (requestDTO.getContent() == null || requestDTO.getContent().isBlank()) {
+            if (requestDTO.content() == null || requestDTO.content().isBlank()) {
                 throw new IllegalArgumentException("Content is required.");
             }
-            if (requestDTO.getEntryType() == null) {
+            if (requestDTO.entryType() == null) {
                 throw new IllegalArgumentException("Entry type is required.");
             }
-            if (requestDTO.getRiskAssessment() == null) {
+            if (requestDTO.riskAssessment() == null) {
                 throw new IllegalArgumentException("Risk assessment is required.");
             }
 
@@ -85,10 +92,10 @@ public class JournalEntryController implements IController<JournalEntry, Long>
             JournalEntry entry = new JournalEntry();
             entry.setJournal(journal);
             entry.setAuthor(author);
-            entry.setTitle(requestDTO.getTitle());
-            entry.setContent(requestDTO.getContent());
-            entry.setEntryType(requestDTO.getEntryType());
-            entry.setRiskAssessment(requestDTO.getRiskAssessment());
+            entry.setTitle(requestDTO.title());
+            entry.setContent(requestDTO.content());
+            entry.setEntryType(requestDTO.entryType());
+            entry.setRiskAssessment(requestDTO.riskAssessment());
 
             LocalDateTime now = LocalDateTime.now();
             entry.setCreatedAt(now);
@@ -122,7 +129,7 @@ public class JournalEntryController implements IController<JournalEntry, Long>
         } catch (IllegalArgumentException e) {
             ctx.status(400).result(e.getMessage());
         } catch (Exception e) {
-            logger.error("Internal server error", e);
+            logger.error("Error", e);
             ctx.status(500).result("Internal server error");
         }
     }
@@ -150,7 +157,7 @@ public class JournalEntryController implements IController<JournalEntry, Long>
                 throw new IllegalArgumentException("Journal entry does not belong to the specified journal.");
             }
 
-            if (requestDTO.getContent() == null || requestDTO.getContent().isBlank()) {
+            if (requestDTO.content() == null || requestDTO.content().isBlank()) {
                 throw new IllegalArgumentException("Content is required.");
             }
 
@@ -159,7 +166,7 @@ public class JournalEntryController implements IController<JournalEntry, Long>
                 throw new IllegalArgumentException("Edit window has closed for this entry.");
             }
 
-            entry.setContent(requestDTO.getContent());
+            entry.setContent(requestDTO.content());
             entry.setUpdatedAt(now);
 
             journalEntryDAO.update(entryId, entry);
@@ -182,7 +189,7 @@ public class JournalEntryController implements IController<JournalEntry, Long>
         } catch (IllegalArgumentException e) {
             ctx.status(400).result(e.getMessage());
         } catch (Exception e) {
-            logger.error("Internal server error", e);
+            logger.error("Error", e);
             ctx.status(500).result("Internal server error");
         }
     }
@@ -233,7 +240,7 @@ public class JournalEntryController implements IController<JournalEntry, Long>
         } catch (IllegalArgumentException e) {
             ctx.status(400).result(e.getMessage());
         } catch (Exception e) {
-            logger.error("Internal server error", e);
+            logger.error("Error", e);
             ctx.status(500).result("Internal server error");
         }
     }

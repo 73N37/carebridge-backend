@@ -64,11 +64,12 @@ public class SecurityController implements ISecurityController {
                 UserDTO safeUser = UserMapper.toDTO(verified);
 
                 ctx.status(200).json(out.put("token", token)
-                        .put("email", safeUser.getEmail())
-                        .put("role", safeUser.getRole().name()));
+                        .put("email", safeUser.email())
+                        .put("role", safeUser.role().name()));
             } catch (ValidationException e) {
                 ctx.status(401).json(out.put("msg", e.getMessage()));
             } catch (Exception e) {
+
                 logger.error("login failed", e);
                 ctx.status(500).json(out.put("msg", "Internal error"));
             }
@@ -85,15 +86,15 @@ public class SecurityController implements ISecurityController {
 
                 // Opret bruger i DB via SecurityDAO med alle felter
                 User created = securityDAO.createUser(
-                        dto.getName(),
-                        dto.getEmail(),
-                        dto.getPassword(),
-                        dto.getDisplayName(),
-                        dto.getDisplayEmail(),
-                        dto.getDisplayPhone(),
-                        dto.getInternalEmail(),
-                        dto.getInternalPhone(),
-                        dto.getRole()
+                        dto.name(),
+                        dto.email(),
+                        dto.password(),
+                        dto.displayName(),
+                        dto.displayEmail(),
+                        dto.displayPhone(),
+                        dto.internalEmail(),
+                        dto.internalPhone(),
+                        dto.role()
                 );
 
                 // Lav JWT
@@ -143,7 +144,7 @@ public class SecurityController implements ISecurityController {
             JwtUserDTO verifiedTokenUser = verifyToken(token);
             if (verifiedTokenUser == null) throw new UnauthorizedResponse("Invalid User or Token");
 
-            logger.info("User verified: {}", verifiedTokenUser.getUsername());
+            logger.info("User verified: {}", verifiedTokenUser.username());
             ctx.attribute("user", verifiedTokenUser);
         };
     }
@@ -152,7 +153,7 @@ public class SecurityController implements ISecurityController {
     public boolean authorize(JwtUserDTO user, Set<RouteRole> allowedRoles) {
         if (user == null) throw new UnauthorizedResponse("You need to log in, dude!");
         var allowed = allowedRoles.stream().map(RouteRole::toString).collect(Collectors.toSet());
-        return user.getRoles().stream().map(String::toUpperCase).anyMatch(allowed::contains);
+        return user.roles().stream().map(String::toUpperCase).anyMatch(allowed::contains);
     }
 
     @Override

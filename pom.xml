@@ -193,7 +193,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.4</version>
             </plugin>
-
+            
             <!-- Jacoco for test coverage -->
             <plugin>
                 <groupId>org.jacoco</groupId>

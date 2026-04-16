@@ -34,16 +34,6 @@ public abstract class BaseRestTest {
         }
     }
 
-    private static void register(String name, String email, String password) {
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .contentType(ContentType.JSON)
-                .body(String.format("{\"name\":\"%s\", \"email\":\"%s\", \"password\":\"%s\", \"role\":\"USER\"}", name, email, password))
-                .post("/auth/register")
-                .then()
-                .statusCode(201);
-    }
-
     private static String login(String email, String password) {
         return given()
                 .contentType(ContentType.JSON)
@@ -54,8 +44,16 @@ public abstract class BaseRestTest {
                 .extract().path("token");
     }
 
-    // Remove @AfterAll to keep server running for other test classes
-    // Javalin will be stopped when JVM exits or we can use a shutdown hook
+    private static void register(String name, String email, String password) {
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(String.format("{\"name\":\"%s\", \"email\":\"%s\", \"password\":\"%s\", \"role\":\"USER\"}", name, email, password))
+                .post("/auth/register")
+                .then()
+                .statusCode(201);
+    }
+
     static {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (app != null) app.stop();

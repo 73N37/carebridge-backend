@@ -41,7 +41,7 @@ public class AccessController implements IAccessController {
         JwtUserDTO user;
         try {
             user = securityController.verifyToken(token);
-            System.out.println("Verified roles: " + user.getRoles());
+            System.out.println("Verified roles: " + user.roles());
             ctx.attribute("user", user);
         } catch (Exception e) {
             throw new UnauthorizedResponse("You need to log in, dude! Or your token is invalid.");
@@ -53,7 +53,7 @@ public class AccessController implements IAccessController {
                 .map(String::toUpperCase)
                 .collect(Collectors.toSet());
 
-        boolean ok = user.getRoles().stream()
+        boolean ok = user.roles().stream()
                 .map(String::toUpperCase)
                 .anyMatch(allowedNames::contains);
 

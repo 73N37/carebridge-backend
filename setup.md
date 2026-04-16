@@ -115,8 +115,9 @@ Once running, the API will be available at:
 
 ---
 
-## 🧪 Running Tests
+## 7. Troubleshooting
 
+<<<<<<< HEAD
 The project includes a comprehensive suite of RESTful API tests. They use **Testcontainers** to spin up a temporary **PostgreSQL** instance in Docker, ensuring tests run against a production-like environment.
 
 ### 1. Requirements for Testing
@@ -133,3 +134,8 @@ The tests will automatically:
 3. Populate it with initial data.
 4. Run 50+ REST API scenarios.
 5. Generate a JaCoCo coverage report in `target/site/jacoco/index.html`.
+=======
+- **Port Conflict**: If port 7070 is taken, change `SERVER_PORT` in `.env`.
+- **Database Connection**: Ensure the server firewall allows outgoing connections to your database port (usually 5432).
+- **Java Version**: Run `java -version` to ensure it is version 25. If not, the application will fail to start with a "Class version mismatch" error.
+>>>>>>> parent of 23ec998 (Refactor error handling in controllers to use standardized status codes; enhance user and event data retrieval with eager loading; implement CRUD operations for journal entries and residents; introduce base REST test class for improved test structure; update UserDTO to include password handling; add comprehensive tests for user, event, and journal entry functionalities.)

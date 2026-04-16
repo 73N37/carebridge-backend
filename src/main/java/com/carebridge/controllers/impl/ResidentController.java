@@ -29,17 +29,17 @@ public class ResidentController implements IController<Resident, Long> {
             if (req == null) {
                 throw new IllegalArgumentException("Request body is required");
             }
-            if (req.getFirstName() == null || req.getFirstName().isBlank()) {
+            if (req.firstName() == null || req.firstName().isBlank()) {
                 throw new IllegalArgumentException("firstName is required");
             }
-            if (req.getLastName() == null || req.getLastName().isBlank()) {
+            if (req.lastName() == null || req.lastName().isBlank()) {
                 throw new IllegalArgumentException("lastName is required");
             }
 
             Resident resident = new Resident();
-            resident.setFirstName(req.getFirstName());
-            resident.setLastName(req.getLastName());
-            resident.setCprNr(req.getCprNr());
+            resident.setFirstName(req.firstName());
+            resident.setLastName(req.lastName());
+            resident.setCprNr(req.cprNr());
 
             // create single linked journal
             Journal journal = new Journal();
@@ -50,8 +50,8 @@ public class ResidentController implements IController<Resident, Long> {
             // --- Extract authenticated user and attach to resident/journal if desired ---
             var tokenUser = ctx.attribute("user");
             String email = null;
-            if (tokenUser instanceof com.carebridge.dtos.JwtUserDTO ju) email = ju.getUsername();
-            else if (tokenUser instanceof com.carebridge.dtos.UserDTO du) email = du.getEmail();
+            if (tokenUser instanceof com.carebridge.dtos.JwtUserDTO ju) email = ju.username();
+            else if (tokenUser instanceof com.carebridge.dtos.UserDTO du) email = du.email();
             else if (tokenUser != null) email = tokenUser.toString();
 
             if (email != null) {
@@ -59,8 +59,6 @@ public class ResidentController implements IController<Resident, Long> {
                 if (user != null) {
                     // attach user to resident (many-to-many)
                     resident.addUser(user);
-                    // if you also want to mark journal creator, add a setter on Journal and set it
-                    // journal.setCreatedBy(user);
                 }
             }
             // -----------------------------------------------------------------------

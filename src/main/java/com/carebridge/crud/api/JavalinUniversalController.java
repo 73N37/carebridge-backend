@@ -116,21 +116,6 @@ public class JavalinUniversalController {
         ctx.status(204);
     }
 
-    public io.javalin.apibuilder.EndpointGroup getRoutes() {
-        return () -> {
-            io.javalin.apibuilder.ApiBuilder.get("/metadata", this::getMetadata);
-            io.javalin.apibuilder.ApiBuilder.path("/{resource}", () -> {
-                io.javalin.apibuilder.ApiBuilder.get(this::getAll);
-                io.javalin.apibuilder.ApiBuilder.post(this::create);
-                io.javalin.apibuilder.ApiBuilder.path("/{id}", () -> {
-                    io.javalin.apibuilder.ApiBuilder.get(this::getById);
-                    io.javalin.apibuilder.ApiBuilder.put(this::update);
-                    io.javalin.apibuilder.ApiBuilder.delete(this::delete);
-                });
-            });
-        };
-    }
-
     private ResourceMetadata<?> getMetadataOrThrow(String resource) {
         ResourceMetadata<?> metadata = crudManager.getMetadata(resource);
         if (metadata == null) {

@@ -117,8 +117,8 @@ public class UserController implements IController<User, Long> {
                 return;
             }
             String email = null;
-            if (jwtUser instanceof com.carebridge.dtos.JwtUserDTO ju) email = ju.getUsername();
-            else if (jwtUser instanceof com.carebridge.dtos.UserDTO ud) email = ud.getEmail();
+            if (jwtUser instanceof com.carebridge.dtos.JwtUserDTO ju) email = ju.username();
+            else if (jwtUser instanceof com.carebridge.dtos.UserDTO ud) email = ud.email();
 
             if (email == null) {
                 ctx.status(401).json("{\"msg\":\"Unauthorized\"}");
@@ -179,7 +179,7 @@ public class UserController implements IController<User, Long> {
 
             // Hent residents
             List<Resident> residentsToLink = new ArrayList<>();
-            for (Long residentId : request.getResidentIds()) {
+            for (Long residentId : request.residentIds()) {
                 Resident resident = residentDAO.read(residentId);
                 if (resident != null) {
                     residentsToLink.add(resident);

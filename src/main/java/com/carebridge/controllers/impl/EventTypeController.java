@@ -50,7 +50,7 @@ public class EventTypeController implements IController<EventType, Long> {
     public void create(Context ctx) {
         try {
             EventTypeDTO dto = ctx.bodyAsClass(EventTypeDTO.class);
-            var entity = new EventType(dto.getName(), dto.getColorHex());
+            var entity = new EventType(dto.name(), dto.colorHex());
             var created = eventTypeDAO.create(entity);
             ctx.status(201).json(EventTypeMapper.toDTO(created));
         } catch (ApiRuntimeException e) {
@@ -67,8 +67,8 @@ public class EventTypeController implements IController<EventType, Long> {
             Long id = parseId(ctx);
             EventTypeDTO dto = ctx.bodyAsClass(EventTypeDTO.class);
             var patch = new EventType();
-            patch.setName(dto.getName());
-            patch.setColorHex(dto.getColorHex());
+            patch.setName(dto.name());
+            patch.setColorHex(dto.colorHex());
             var updated = eventTypeDAO.update(id, patch);
             if (updated == null) {
                 ctx.status(404).json("{\"msg\":\"EventType not found\"}");

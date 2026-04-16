@@ -35,15 +35,7 @@ public class EventDAO implements IDAO<Event, Long> {
     @Override
     public Event read(Long id) {
         try (var em = em()) {
-            var list = em.createQuery(
-                "SELECT DISTINCT e FROM Event e " +
-                "LEFT JOIN FETCH e.createdBy " +
-                "LEFT JOIN FETCH e.eventType " +
-                "LEFT JOIN FETCH e.seenByUsers " +
-                "WHERE e.id = :id", Event.class)
-                .setParameter("id", id)
-                .getResultList();
-            return list.isEmpty() ? null : list.get(0);
+            return em.find(Event.class, id);
         } catch (Exception e) {
             logger.error("Error reading Event id={}", id, e);
             throw new ApiRuntimeException(500, "Error reading event: " + e.getMessage());
@@ -70,7 +62,7 @@ public class EventDAO implements IDAO<Event, Long> {
             if (userId == null)
                 throw new ValidationException("User ID cannot be null");
 
-            return em.createQuery("SELECT DISTINCT e FROM Event e WHERE e.createdBy.id = :uid ORDER BY e.startAt", Event.class)
+            return em.createQuery("SELECT e FROM Event e WHERE e.createdBy.id = :uid ORDER BY e.startAt", Event.class)
                     .setParameter("uid", userId)
                     .getResultList();
         } catch (ValidationException e) {
@@ -134,7 +126,7 @@ public class EventDAO implements IDAO<Event, Long> {
             }
 
             em.getTransaction().commit();
-            return read(id);
+            return existing;
         } catch (ApiRuntimeException e) {
             throw e;
         } catch (Exception e) {

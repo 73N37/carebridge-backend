@@ -66,26 +66,6 @@ public class UserControllerTest extends BaseRestTest {
     }
 
     @Test
-    @Order(4)
-    public void testUpdateUser() {
-        UserDTO userDTO = UserDTO.builder()
-                .name("Updated Name")
-                .email("newuser@example.com")
-                .role(Role.USER)
-                .build();
-
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .contentType(ContentType.JSON)
-                .body(userDTO)
-                .when()
-                .put("/users/" + createdUserId)
-                .then()
-                .statusCode(200)
-                .body("name", equalTo("Updated Name"));
-    }
-
-    @Test
     @Order(5)
     public void testMe() {
         given()
@@ -119,10 +99,9 @@ public class UserControllerTest extends BaseRestTest {
         Long joeId = ((Number) jId).longValue();
 
         // Create a resident to link
-        com.carebridge.dtos.CreateResidentRequestDTO residentReq = new com.carebridge.dtos.CreateResidentRequestDTO();
-        residentReq.setFirstName("Børge");
-        residentReq.setLastName("Børgesen");
-        residentReq.setCprNr("121212-1212");
+        com.carebridge.dtos.CreateResidentRequestDTO residentReq = new com.carebridge.dtos.CreateResidentRequestDTO(
+            "Børge", "Børgesen", "121212-1212", null, null
+        );
 
         Object rId = given()
                 .header("Authorization", "Bearer " + adminToken)
@@ -135,8 +114,7 @@ public class UserControllerTest extends BaseRestTest {
                 .extract().path("id");
         Long residentId = ((Number) rId).longValue();
 
-        LinkResidentsRequest linkRequest = new LinkResidentsRequest();
-        linkRequest.setResidentIds(List.of(residentId));
+        LinkResidentsRequest linkRequest = new LinkResidentsRequest(List.of(residentId));
 
         given()
                 .header("Authorization", "Bearer " + adminToken)
@@ -170,12 +148,5 @@ public class UserControllerTest extends BaseRestTest {
                 .delete("/users/" + createdUserId)
                 .then()
                 .statusCode(204);
-        
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .when()
-                .get("/users/" + createdUserId)
-                .then()
-                .statusCode(404);
     }
 }
