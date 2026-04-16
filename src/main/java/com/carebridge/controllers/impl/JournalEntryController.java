@@ -34,7 +34,7 @@ public class JournalEntryController implements IController<JournalEntry, Long>
         } catch (IllegalArgumentException e) {
             ctx.status(400).result(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Internal server error", e);
             ctx.status(500).result("Internal server error");
         }
     }
@@ -122,7 +122,7 @@ public class JournalEntryController implements IController<JournalEntry, Long>
         } catch (IllegalArgumentException e) {
             ctx.status(400).result(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Internal server error", e);
             ctx.status(500).result("Internal server error");
         }
     }
@@ -182,7 +182,7 @@ public class JournalEntryController implements IController<JournalEntry, Long>
         } catch (IllegalArgumentException e) {
             ctx.status(400).result(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Internal server error", e);
             ctx.status(500).result("Internal server error");
         }
     }
@@ -233,7 +233,7 @@ public class JournalEntryController implements IController<JournalEntry, Long>
         } catch (IllegalArgumentException e) {
             ctx.status(400).result(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Internal server error", e);
             ctx.status(500).result("Internal server error");
         }
     }

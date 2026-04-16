@@ -38,7 +38,7 @@ public class EventController implements IController<Event, Long> {
             }
             ctx.json(EventMapper.toDTO(entity));
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("read event failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");
@@ -151,7 +151,7 @@ public class EventController implements IController<Event, Long> {
             var created = eventDAO.create(e);
             ctx.status(201).json(EventMapper.toDTO(created));
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("create event failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");
@@ -181,7 +181,7 @@ public class EventController implements IController<Event, Long> {
             }
             ctx.json(EventMapper.toDTO(updated));
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("update event failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");
@@ -195,7 +195,7 @@ public class EventController implements IController<Event, Long> {
             eventDAO.delete(id);
             ctx.status(204);
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("delete event failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");
@@ -252,7 +252,7 @@ public class EventController implements IController<Event, Long> {
             ctx.status(204);
 
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("markSeen failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");
@@ -280,7 +280,7 @@ public class EventController implements IController<Event, Long> {
             ctx.status(204);
 
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("unmarkSeen failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");

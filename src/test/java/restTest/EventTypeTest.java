@@ -14,37 +14,15 @@ import static org.hamcrest.Matchers.is;
 
     @TestInstance(TestInstance.Lifecycle.PER_CLASS)
     @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-    public class EventTypeTest {
+    public class EventTypeTest extends BaseRestTest {
 
         private static String authToken;
         private static String adminAuthToken;
-        private Javalin app;
 
         @BeforeAll
-        public void setup() throws Exception {
-            HibernateConfig.setTest(true);
-
-            app = ApplicationConfig.startServer(7070);
-
-            Populator.populate(HibernateConfig.getEntityManagerFactoryForTest());
-
-            RestAssured.baseURI = "http://localhost:7070/api";
-
-            authToken = given()
-                    .contentType(ContentType.JSON)
-                    .body("{\"email\":\"alice@carebridge.io\", \"password\":\"password123\"}")
-                    .post("/auth/login")
-                    .then()
-                    .statusCode(200)
-                    .extract().path("token");
-
-            adminAuthToken = given()
-                    .contentType(ContentType.JSON)
-                    .body("{\"email\":\"admin@carebridge.io\", \"password\":\"admin123\"}")
-                    .post("/auth/login")
-                    .then()
-                    .statusCode(200)
-                    .extract().path("token");
+        public void setupLocal() {
+            authToken = userToken;
+            adminAuthToken = adminToken;
         }
 
     private static int createdEventTypeId;

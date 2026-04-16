@@ -36,6 +36,9 @@ public final class UserMapper {
         u.setDisplayPhone(dto.getDisplayPhone());
         u.setInternalEmail(dto.getInternalEmail());
         u.setInternalPhone(dto.getInternalPhone());
+        if (dto.getPassword() != null) {
+            u.setPassword(dto.getPassword());
+        }
         return u;
     }
 

@@ -69,7 +69,6 @@ public class SecurityController implements ISecurityController {
             } catch (ValidationException e) {
                 ctx.status(401).json(out.put("msg", e.getMessage()));
             } catch (Exception e) {
-
                 logger.error("login failed", e);
                 ctx.status(500).json(out.put("msg", "Internal error"));
             }
@@ -117,7 +116,7 @@ public class SecurityController implements ISecurityController {
                         .put("internalPhone", created.getInternalPhone())
                 );
             } catch (ApiRuntimeException e) {
-                ctx.status(e.getErrorCode()).json(out.put("msg", e.getMessage()));
+                ctx.status(e.getStatusCode()).json(out.put("msg", e.getMessage()));
             } catch (Exception e) {
                 logger.error("register failed", e);
                 ctx.status(500).json(out.put("msg", "Internal error"));

@@ -28,7 +28,7 @@ public class EventTypeController implements IController<EventType, Long> {
             }
             ctx.json(EventTypeMapper.toDTO(entity));
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("read eventType failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");
@@ -54,7 +54,7 @@ public class EventTypeController implements IController<EventType, Long> {
             var created = eventTypeDAO.create(entity);
             ctx.status(201).json(EventTypeMapper.toDTO(created));
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("create eventType failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");
@@ -76,7 +76,7 @@ public class EventTypeController implements IController<EventType, Long> {
             }
             ctx.json(EventTypeMapper.toDTO(updated));
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("update eventType failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");
@@ -90,7 +90,7 @@ public class EventTypeController implements IController<EventType, Long> {
             eventTypeDAO.delete(id);
             ctx.status(204);
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("delete eventType failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");

@@ -40,8 +40,15 @@ public class MappingService {
                 try {
                     field.setAccessible(true);
                     Object value = field.get(entity);
-                    // Avoid recursion or deep mapping for now, just flat map
-                    result.put(field.getName(), value);
+                    
+                    if (value instanceof BaseEntity be) {
+                        result.put(field.getName() + "Id", be.getId());
+                    } else if (value instanceof java.util.Collection<?> col) {
+                        // Skip collections for now to avoid LazyInitializationException
+                        // In a real app, we'd map to a list of IDs
+                    } else {
+                        result.put(field.getName(), value);
+                    }
                 } catch (IllegalAccessException e) {
                     // Skip if inaccessible
                 }

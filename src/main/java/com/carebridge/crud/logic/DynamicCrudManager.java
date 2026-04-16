@@ -11,12 +11,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import org.reflections.Reflections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.lang.reflect.Field;
-import java.net.URL;
 import java.util.*;
 
 /**
@@ -39,30 +38,22 @@ public class DynamicCrudManager {
         interceptors.put(entityClass, interceptor);
     }
 
-    /**
-     * Scans a package for @CrudResource entities and registers them.
-     */
     public void discoverAndRegister(String packageName) {
         try {
-            String path = packageName.replace('.', '/');
-            Enumeration<URL> urls = Thread.currentThread().getContextClassLoader().getResources(path);
-            while (urls.hasMoreElements()) {
-                URL resource = urls.nextElement();
-                File directory = new File(resource.getFile().replace("%20", " "));
-                if (directory.exists()) {
-                    File[] files = directory.listFiles();
-                    if (files != null) {
-                        for (File file : files) {
-                            if (file.getName().endsWith(".class")) {
-                                String className = packageName + "." + file.getName().substring(0, file.getName().length() - 6);
-                                Class<?> clazz = Class.forName(className);
-                                if (clazz.isAnnotationPresent(CrudResource.class)) {
-                                    registerResource(clazz);
-                                }
-                            }
-                        }
-                    }
-                }
+            log.info("🔍 [UNIVERSAL CRUD] Scanning package: [{}] for @CrudResource", packageName);
+            
+            org.reflections.util.ConfigurationBuilder config = new org.reflections.util.ConfigurationBuilder()
+                    .forPackages(packageName)
+                    .addScanners(org.reflections.scanners.Scanners.TypesAnnotated)
+                    .addUrls(org.reflections.util.ClasspathHelper.forPackage(packageName))
+                    .addUrls(org.reflections.util.ClasspathHelper.forJavaClassPath());
+            
+            Reflections reflections = new Reflections(config);
+            
+            Set<Class<?>> annotated = reflections.getTypesAnnotatedWith(CrudResource.class);
+            log.info("🔍 [UNIVERSAL CRUD] Found {} annotated classes: {}", annotated.size(), annotated);
+            for (Class<?> clazz : annotated) {
+                registerResource(clazz);
             }
         } catch (Exception e) {
             log.error("Failed to discover resources in package: " + packageName, e);

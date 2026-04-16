@@ -1,8 +1,8 @@
 package com.carebridge.dtos;
 
 import java.util.Objects;
-
 import com.carebridge.enums.Role;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class UserDTO {
     private Long id;
@@ -16,9 +16,12 @@ public class UserDTO {
     private String internalEmail;
     private String internalPhone;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String password;
+
     public UserDTO() {}
 
-    public UserDTO(Long id, String name, String email, Role role, String displayName, String displayEmail, String displayPhone, String internalEmail, String internalPhone) {
+    public UserDTO(Long id, String name, String email, Role role, String displayName, String displayEmail, String displayPhone, String internalEmail, String internalPhone, String password) {
         this.id = id;
         this.name = name;
         this.email = email;
@@ -28,6 +31,7 @@ public class UserDTO {
         this.displayPhone = displayPhone;
         this.internalEmail = internalEmail;
         this.internalPhone = internalPhone;
+        this.password = password;
     }
 
     public Long getId() { return id; }
@@ -48,6 +52,8 @@ public class UserDTO {
     public void setInternalEmail(String internalEmail) { this.internalEmail = internalEmail; }
     public String getInternalPhone() { return internalPhone; }
     public void setInternalPhone(String internalPhone) { this.internalPhone = internalPhone; }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 
     @Override
     public boolean equals(Object o) {
@@ -80,6 +86,7 @@ public class UserDTO {
         private String displayPhone;
         private String internalEmail;
         private String internalPhone;
+        private String password;
 
         public UserDTOBuilder id(Long id) { this.id = id; return this; }
         public UserDTOBuilder name(String name) { this.name = name; return this; }
@@ -90,9 +97,10 @@ public class UserDTO {
         public UserDTOBuilder displayPhone(String displayPhone) { this.displayPhone = displayPhone; return this; }
         public UserDTOBuilder internalEmail(String internalEmail) { this.internalEmail = internalEmail; return this; }
         public UserDTOBuilder internalPhone(String internalPhone) { this.internalPhone = internalPhone; return this; }
+        public UserDTOBuilder password(String password) { this.password = password; return this; }
 
         public UserDTO build() {
-            return new UserDTO(id, name, email, role, displayName, displayEmail, displayPhone, internalEmail, internalPhone);
+            return new UserDTO(id, name, email, role, displayName, displayEmail, displayPhone, internalEmail, internalPhone, password);
         }
     }
 }

@@ -115,8 +115,23 @@ Once running, the API will be available at:
 
 ---
 
-## 7. Troubleshooting
+## 🧪 Running Tests
 
-- **Port Conflict**: If port 7070 is taken, change `SERVER_PORT` in `.env`.
-- **Database Connection**: Ensure the server firewall allows outgoing connections to your database port (usually 5432).
-- **Java Version**: Run `java -version` to ensure it is version 25. If not, the application will fail to start with a "Class version mismatch" error.
+The project includes a comprehensive suite of RESTful API tests. By default, they use an **H2 In-Memory Database** for speed and environment compatibility (no Docker required).
+
+To run all tests:
+```bash
+mvn clean test
+```
+
+To run a specific test class:
+```bash
+mvn test "-Dtest=restTest.UserControllerTest"
+```
+
+The tests will automatically:
+1. Start a Javalin server on port 7070.
+2. Initialize an H2 database.
+3. Populate it with initial data.
+4. Run 50+ REST API scenarios.
+5. Generate a JaCoCo coverage report in `target/site/jacoco/index.html`.

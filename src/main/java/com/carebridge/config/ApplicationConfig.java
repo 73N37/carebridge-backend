@@ -4,104 +4,93 @@ import com.carebridge.crud.api.JavalinUniversalController;
 import com.carebridge.crud.logic.DynamicCrudManager;
 import com.carebridge.controllers.security.AccessController;
 import com.carebridge.exceptions.ApiException;
+import com.carebridge.exceptions.ApiRuntimeException;
 import com.carebridge.routes.Routes;
 import com.carebridge.utils.Utils;
 import io.javalin.Javalin;
-import io.javalin.apibuilder.ApiBuilder;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
-import io.javalin.json.JavalinJackson;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+
 public class ApplicationConfig {
 
-    private static final AccessController accessController = new AccessController();
     private static final Logger logger = LoggerFactory.getLogger(ApplicationConfig.class);
+    private static final AccessController accessController = new AccessController();
     private static final Routes routes = new Routes();
-    private static final String frontEndOrigin = "http://localhost:5173";
-    private static int count = 1;
-
-    // 🚀 UNIVERSAL CRUD INITIALIZATION
-    private static final EntityManager em = HibernateConfig.getEntityManagerFactory().createEntityManager();
-    private static final DynamicCrudManager crudManager = new DynamicCrudManager(em);
-    private static final JavalinUniversalController universalController = new JavalinUniversalController(crudManager);
-
-    static {
-        // Discover entities in the project
-        crudManager.discoverAndRegister("com.carebridge.entities");
-    }
-
-    public static void configuration(JavalinConfig config) {
-        config.showJavalinBanner = false;
-        config.bundledPlugins.enableRouteOverview("/routes");
-        config.router.contextPath = "/api";
-        
-        config.router.apiBuilder(() -> {
-            // Existing routes
-            routes.getRoutes().addEndpoints();
-            
-            // 🌐 UNIVERSAL CRUD ROUTES (v3)
-            ApiBuilder.path("v3", () -> {
-                ApiBuilder.get("metadata", universalController::getMetadata);
-                ApiBuilder.path("{resource}", () -> {
-                    ApiBuilder.get(universalController::getAll);
-                    ApiBuilder.post(universalController::create);
-                    ApiBuilder.path("{id}", () -> {
-                        ApiBuilder.get(universalController::getById);
-                        ApiBuilder.put(universalController::update);
-                        ApiBuilder.delete(universalController::delete);
-                    });
-                });
-            });
-        });
-
-        config.jsonMapper(new JavalinJackson().updateMapper(mapper -> {
-            mapper = new Utils().getObjectMapper();
-        }));
-    }
+    
+    private static DynamicCrudManager crudManager;
+    private static JavalinUniversalController universalController;
 
     public static Javalin startServer(int port) {
+        // Ensure CRUD components are initialized with the correct EMF
+        initializeUniversalCrud();
+        
         Javalin app = Javalin.create(ApplicationConfig::configuration);
-
-        app.beforeMatched(accessController::accessHandler);
-
-        app.before(ApplicationConfig::corsHeaders);
-        app.options("/*", ApplicationConfig::corsHeadersOptions);
-
-        app.after(ApplicationConfig::afterRequest);
-
-        app.exception(Exception.class, ApplicationConfig::generalExceptionHandler);
-        app.exception(ApiException.class, ApplicationConfig::apiExceptionHandler);
-
         app.start(port);
         return app;
     }
 
-    public static void afterRequest(Context ctx) {
-        String requestInfo = ctx.req().getMethod() + " " + ctx.req().getRequestURI();
-        logger.info("Request {} - {} was handled with status code {}", count++, requestInfo, ctx.status());
+    private static synchronized void initializeUniversalCrud() {
+        EntityManager em = HibernateConfig.getEntityManagerFactory().createEntityManager();
+        crudManager = new DynamicCrudManager(em);
+        crudManager.discoverAndRegister("com.carebridge.entities");
+        universalController = new JavalinUniversalController(crudManager);
     }
 
-    public static void stopServer(Javalin app) {
-        app.stop();
-    }
+    public static void configuration(JavalinConfig config) {
+        config.showJavalinBanner = false;
 
-    private static void generalExceptionHandler(Exception e, Context ctx) {
-        logger.error("Unhandled exception: ", e);
-        ctx.status(500);
-        ctx.json(Utils.convertToJsonMessage(ctx, "error", e.getMessage()));
-    }
+        config.router.apiBuilder(() -> {
+            io.javalin.apibuilder.ApiBuilder.get("/", ctx -> ctx.result("Carebridge API is running"));
+            io.javalin.apibuilder.ApiBuilder.path("/api", () -> {
+                routes.getRoutes().addEndpoints();
+                
+                // 🌟 UNIVERSAL CRUD API (v3)
+                if (universalController != null) {
+                    io.javalin.apibuilder.ApiBuilder.path("v3", universalController.getRoutes());
+                }
+            });
+        });
 
-    public static void apiExceptionHandler(ApiException e, Context ctx) {
-        ctx.status(e.getStatusCode());
-        logger.warn("API exception ({}): {}", e.getStatusCode(), e.getMessage());
-        ctx.json(Utils.convertToJsonMessage(ctx, "warning", e.getMessage()));
+        config.router.mount(router -> {
+            router.beforeMatched(accessController::accessHandler);
+        });
+
+        config.bundledPlugins.enableCors(cors -> {
+            cors.addRule(it -> {
+                it.anyHost();
+            });
+        });
+
+        config.router.mount(router -> {
+            router.before(ApplicationConfig::corsHeaders);
+            router.options("/*", ApplicationConfig::corsHeadersOptions);
+        });
+
+        // EXCEPTION HANDLING
+        config.router.mount(router -> {
+            router.exception(ApiException.class, (e, ctx) -> {
+                ctx.status(e.getStatusCode()).json(Map.of("msg", e.getMessage()));
+            });
+            router.exception(ApiRuntimeException.class, (e, ctx) -> {
+                ctx.status(e.getStatusCode()).json(Map.of("msg", e.getMessage()));
+            });
+            router.exception(io.javalin.validation.ValidationException.class, (e, ctx) -> {
+                ctx.status(400).json(Map.of("msg", e.getMessage()));
+            });
+            router.exception(Exception.class, (e, ctx) -> {
+                logger.error("Unhandled exception", e);
+                ctx.status(500).json(Map.of("msg", "Internal server error"));
+            });
+        });
     }
 
     private static void corsHeaders(Context ctx) {
-        ctx.header("Access-Control-Allow-Origin", frontEndOrigin);
+        ctx.header("Access-Control-Allow-Origin", "*");
         ctx.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         ctx.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
         ctx.header("Access-Control-Allow-Credentials", "true");

@@ -39,7 +39,7 @@ public class UserController implements IController<User, Long> {
             }
             ctx.json(UserMapper.toDTO(entity));
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("read user failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");
@@ -65,7 +65,7 @@ public class UserController implements IController<User, Long> {
             var created = userDAO.create(entity);
             ctx.status(201).json(UserMapper.toDTO(created));
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("create user failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");
@@ -85,7 +85,7 @@ public class UserController implements IController<User, Long> {
             }
             ctx.json(UserMapper.toDTO(updated));
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("update user failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");
@@ -99,7 +99,7 @@ public class UserController implements IController<User, Long> {
             userDAO.delete(id);
             ctx.status(204);
         } catch (ApiRuntimeException e) {
-            ctx.status(e.getErrorCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
+            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
             logger.error("delete user failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");

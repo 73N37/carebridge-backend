@@ -98,6 +98,7 @@ public class User extends BaseEntity implements ISecurityUser {
 
     // ========== PASSWORD METHODS ==========
 
+    @com.fasterxml.jackson.annotation.JsonProperty("password")
     public void setPassword(String rawPassword) {
         if (rawPassword == null || rawPassword.isBlank())
             throw new IllegalArgumentException("Password must not be blank");

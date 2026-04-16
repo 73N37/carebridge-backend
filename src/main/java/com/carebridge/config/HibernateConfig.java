@@ -23,7 +23,16 @@ public class HibernateConfig {
     }
 
     public static void setTest(Boolean test) {
+        if (isTest.equals(test)) return;
         isTest = test;
+        if (emf != null) {
+            emf.close();
+            emf = null;
+        }
+        if (emfTest != null) {
+            emfTest.close();
+            emfTest = null;
+        }
     }
 
     public static EntityManagerFactory getEntityManagerFactory() {
@@ -116,10 +125,11 @@ public class HibernateConfig {
     }
 
     private static Properties setTestProperties(Properties props) {
-        props.put("hibernate.connection.driver_class", "org.testcontainers.jdbc.ContainerDatabaseDriver");
-        props.put("hibernate.connection.url", "jdbc:tc:postgresql:15.3-alpine3.18:///test_db");
-        props.put("hibernate.connection.username", "postgres");
-        props.put("hibernate.connection.password", "postgres");
+        props.put("hibernate.connection.driver_class", "org.h2.Driver");
+        props.put("hibernate.connection.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");
+        props.put("hibernate.connection.username", "sa");
+        props.put("hibernate.connection.password", "");
+        props.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
         props.put("hibernate.archive.autodetection", "class");
         props.put("hibernate.show_sql", "true");
         props.put("hibernate.hbm2ddl.auto", "create-drop");
