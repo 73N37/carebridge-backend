@@ -1,6 +1,5 @@
 package restTest;
 
-import com.carebridge.dtos.CreateResidentRequestDTO;
 import io.javalin.http.ContentType;
 import org.junit.jupiter.api.*;
 
@@ -9,13 +8,15 @@ import static org.hamcrest.Matchers.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class ResidentControllerTest extends BaseRestTest {
+public class ResidentTest extends BaseRestTest {
 
     @Test
     @Order(1)
     public void testCreateResident() {
-        CreateResidentRequestDTO req = new CreateResidentRequestDTO(
-            "John", "Doe", "010101-1234", null, null
+        java.util.Map<String, Object> req = java.util.Map.of(
+            "firstName", "John",
+            "lastName", "Doe",
+            "cprNr", "010101-1234"
         );
 
         given()

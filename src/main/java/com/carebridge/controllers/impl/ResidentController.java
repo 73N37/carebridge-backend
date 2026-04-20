@@ -3,75 +3,58 @@ package com.carebridge.controllers.impl;
 import com.carebridge.controllers.IController;
 import com.carebridge.dao.impl.ResidentDAO;
 import com.carebridge.dao.impl.UserDAO;
-import com.carebridge.dtos.CreateResidentRequestDTO;
-import com.carebridge.dtos.ResidentResponseDTO;
 import com.carebridge.entities.Journal;
 import com.carebridge.entities.Resident;
 import com.carebridge.entities.User;
+import com.carebridge.crud.logic.MappingService;
 import io.javalin.http.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
 
 public class ResidentController implements IController<Resident, Long> {
 
     private static final Logger logger = LoggerFactory.getLogger(ResidentController.class);
     private final ResidentDAO residentDAO = ResidentDAO.getInstance();
     private final UserDAO userDAO = UserDAO.getInstance();
+    private final MappingService mappingService = new MappingService();
 
     public ResidentController() {
     }
 
-    // Create resident (POST /api/residents)
     public void create(Context ctx) {
         try {
-            CreateResidentRequestDTO req = ctx.bodyAsClass(CreateResidentRequestDTO.class);
+            Map<String, Object> body = ctx.bodyAsClass(Map.class);
+            Resident resident = mappingService.toEntity(body, Resident.class);
 
-            if (req == null) {
-                throw new IllegalArgumentException("Request body is required");
-            }
-            if (req.firstName() == null || req.firstName().isBlank()) {
+            if (resident.getFirstName() == null || resident.getFirstName().isBlank()) {
                 throw new IllegalArgumentException("firstName is required");
             }
-            if (req.lastName() == null || req.lastName().isBlank()) {
+            if (resident.getLastName() == null || resident.getLastName().isBlank()) {
                 throw new IllegalArgumentException("lastName is required");
             }
-
-            Resident resident = new Resident();
-            resident.setFirstName(req.firstName());
-            resident.setLastName(req.lastName());
-            resident.setCprNr(req.cprNr());
 
             // create single linked journal
             Journal journal = new Journal();
             resident.setJournal(journal);
-            // Important: set the back-reference on the owning side
             journal.setResident(resident);
 
-            // --- Extract authenticated user and attach to resident/journal if desired ---
             var tokenUser = ctx.attribute("user");
             String email = null;
-            if (tokenUser instanceof com.carebridge.dtos.JwtUserDTO ju) email = ju.username();
-            else if (tokenUser instanceof com.carebridge.dtos.UserDTO du) email = du.email();
-            else if (tokenUser != null) email = tokenUser.toString();
+            if (tokenUser instanceof Map<?, ?> ju) {
+                email = (String) ju.get("username");
+            }
 
             if (email != null) {
                 User user = userDAO.readByEmail(email);
                 if (user != null) {
-                    // attach user to resident (many-to-many)
                     resident.addUser(user);
                 }
             }
-            // -----------------------------------------------------------------------
 
             Resident created = residentDAO.create(resident);
-
-            Long journalId = created.getJournal() != null ? created.getJournal().getId() : null;
-            ResidentResponseDTO resp = new ResidentResponseDTO(
-                    created.getId(),
-                    created.getFirstName(),
-                    created.getLastName(),
-                    journalId
-            );
+            Map<String, Object> resp = mappingService.toMap(created);
 
             ctx.status(201);
             ctx.header("Location", "/api/residents/" + created.getId());
@@ -85,12 +68,13 @@ public class ResidentController implements IController<Resident, Long> {
         }
     }
 
-    // Unused interface methods kept minimal
     @Override
     public void delete(Context ctx) { throw new UnsupportedOperationException(); }
 
     @Override
-    public boolean validatePrimaryKey(Long aLong) { return false; }
+    public boolean validatePrimaryKey(Long id) {
+        return id != null && id > 0;
+    }
 
     @Override
     public Resident validateEntity(Context ctx) { return null; }

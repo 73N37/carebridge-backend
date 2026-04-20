@@ -4,13 +4,11 @@ import com.carebridge.controllers.IController;
 import com.carebridge.dao.impl.EventDAO;
 import com.carebridge.dao.impl.EventTypeDAO;
 import com.carebridge.dao.impl.UserDAO;
-import com.carebridge.dtos.EventDTO;
-import com.carebridge.dtos.JwtUserDTO;
 import com.carebridge.entities.Event;
 import com.carebridge.entities.EventType;
 import com.carebridge.entities.User;
 import com.carebridge.exceptions.ApiRuntimeException;
-import com.carebridge.services.mappers.EventMapper;
+import com.carebridge.crud.logic.MappingService;
 import io.javalin.http.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class EventController implements IController<Event, Long> {
@@ -26,6 +25,7 @@ public class EventController implements IController<Event, Long> {
     private final EventDAO eventDAO = EventDAO.getInstance();
     private final EventTypeDAO eventTypeDAO = EventTypeDAO.getInstance();
     private final UserDAO userDAO = UserDAO.getInstance();
+    private final MappingService mappingService = new MappingService();
 
     @Override
     public void read(Context ctx) {
@@ -36,7 +36,7 @@ public class EventController implements IController<Event, Long> {
                 ctx.status(404).json("{\"msg\":\"Event not found\"}");
                 return;
             }
-            ctx.json(EventMapper.toDTO(entity));
+            ctx.json(mappingService.toMap(entity));
         } catch (ApiRuntimeException e) {
             ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
@@ -52,12 +52,8 @@ public class EventController implements IController<Event, Long> {
             String toParam = ctx.queryParam("to");
             String tzParam = ctx.queryParam("tz");
 
-            var tokenUser = ctx.attribute("user");
-            Long currentUserId = extractUserIdFromToken(tokenUser);
-
             if (fromParam != null || toParam != null) {
                 ZoneId zone = resolveZone(tzParam);
-
                 var today = LocalDate.now(zone);
                 LocalDate fromDate = parseDateKeywordOrIso(fromParam, today, 0);
                 LocalDate toDate = parseDateKeywordOrIso(toParam, today, 1);
@@ -65,19 +61,15 @@ public class EventController implements IController<Event, Long> {
                 Instant fromInstant = fromDate.atStartOfDay(zone).toInstant();
                 Instant toInstant = toDate.plusDays(1).atStartOfDay(zone).toInstant();
 
-                var list = eventDAO.readBetween(fromInstant, toInstant).stream()
-                        .map(e -> EventMapper.toDTO(e, currentUserId))
-                        .toList();
-
-                ctx.json(list);
+                var list = eventDAO.readBetween(fromInstant, toInstant);
+                ctx.json(mappingService.toMapList(list));
                 return;
             }
 
             var list = eventDAO.readAll().stream()
                     .sorted((a, b) -> a.getStartAt().compareTo(b.getStartAt()))
-                    .map(e -> EventMapper.toDTO(e, currentUserId))
                     .toList();
-            ctx.json(list);
+            ctx.json(mappingService.toMapList(list));
 
         } catch (Exception e) {
             logger.error("readAll events failed", e);
@@ -86,70 +78,52 @@ public class EventController implements IController<Event, Long> {
     }
 
     private ZoneId resolveZone(String tzParam) {
-        if (tzParam == null || tzParam.isBlank()) {
-            return ZoneId.of("Europe/Copenhagen");
-        }
-        try {
-            return ZoneId.of(tzParam);
-        } catch (Exception ex) {
-            return ZoneId.of("Europe/Copenhagen");
-        }
+        if (tzParam == null || tzParam.isBlank()) return ZoneId.of("Europe/Copenhagen");
+        try { return ZoneId.of(tzParam); } catch (Exception ex) { return ZoneId.of("Europe/Copenhagen"); }
     }
 
     private LocalDate parseDateKeywordOrIso(String value, LocalDate today, int defaultOffsetDays) {
-        if (value == null || value.isBlank()) {
-            return today.plusDays(defaultOffsetDays);
-        }
-        switch (value.toLowerCase()) {
-            case "today":
-                return today;
-            case "tomorrow":
-                return today.plusDays(1);
-            default:
-                return LocalDate.parse(value);
-        }
+        if (value == null || value.isBlank()) return today.plusDays(defaultOffsetDays);
+        return switch (value.toLowerCase()) {
+            case "today" -> today;
+            case "tomorrow" -> today.plusDays(1);
+            default -> LocalDate.parse(value);
+        };
     }
-
-    private Long extractUserIdFromToken(Object tokenUser) {
-        if (tokenUser instanceof JwtUserDTO ju) {
-            var u = userDAO.readByEmail(ju.username());
-            return u != null ? u.getId() : null;
-        }
-        if (tokenUser instanceof com.carebridge.dtos.UserDTO du) {
-            return du.id();
-        }
-        return null;
-    }
-
 
     @Override
     public void create(Context ctx) {
         try {
-            var dto = ctx.bodyAsClass(EventDTO.class);
-            if (dto.title() == null || dto.title().isBlank())
-                throw new ApiRuntimeException(400, "title required");
-            if (dto.startAt() == null) throw new ApiRuntimeException(400, "startAt required");
-            if (dto.startAt().isBefore(Instant.now()))
-                throw new ApiRuntimeException(400, "startAt must be in future");
-            if (dto.eventTypeId() == null) throw new ApiRuntimeException(400, "eventTypeId required");
+            Map<String, Object> body = ctx.bodyAsClass(Map.class);
+            Event e = mappingService.toEntity(body, Event.class);
+            
+            // 🛡️ Manual override for Java Time types which often fail in reflection-based Map -> Entity conversion
+            if (body.containsKey("startAt") && body.get("startAt") != null) {
+                e.setStartAt(Instant.parse((String) body.get("startAt")));
+            }
+
+            if (e.getTitle() == null || e.getTitle().isBlank()) throw new ApiRuntimeException(400, "title required");
+            if (e.getStartAt() == null) throw new ApiRuntimeException(400, "startAt required");
 
             var tokenUser = ctx.attribute("user");
             String email = null;
-            if (tokenUser instanceof JwtUserDTO ju) email = ju.username();
-            else if (tokenUser instanceof com.carebridge.dtos.UserDTO du) email = du.email();
-            else if (tokenUser != null) email = tokenUser.toString();
+            if (tokenUser instanceof Map<?, ?> ju) email = (String) ju.get("username");
 
             if (email == null) throw new ApiRuntimeException(401, "Unauthorized");
 
             User creator = userDAO.readByEmail(email);
             if (creator == null) throw new ApiRuntimeException(401, "Unauthorized");
 
-            EventType et = eventTypeDAO.read(dto.eventTypeId());
-            if (et == null) throw new ApiRuntimeException(404, "EventType not found");
+            if (body.containsKey("eventTypeId")) {
+                Long etId = parseLong(body.get("eventTypeId"));
+                EventType et = eventTypeDAO.read(etId);
+                if (et == null) throw new ApiRuntimeException(404, "EventType not found");
+                e.setEventType(et);
+            }
 
-            Event e = new Event(dto.title(), dto.description(), dto.startAt(), dto.showOnBoard(), creator, et);
+            e.setCreatedBy(creator);
             var created = eventDAO.create(e);
-            ctx.status(201).json(EventMapper.toDTO(created));
+            ctx.status(201).json(mappingService.toMap(created));
         } catch (ApiRuntimeException e) {
             ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
@@ -162,24 +136,22 @@ public class EventController implements IController<Event, Long> {
     public void update(Context ctx) {
         try {
             Long id = parseId(ctx);
-            var dto = ctx.bodyAsClass(EventDTO.class);
+            Map<String, Object> body = ctx.bodyAsClass(Map.class);
+            Event patch = mappingService.toEntity(body, Event.class);
 
-            Event patch = new Event();
-            patch.setTitle(dto.title());
-            patch.setDescription(dto.description());
-            patch.setStartAt(dto.startAt());
-            patch.setShowOnBoard(dto.showOnBoard());
-            if (dto.eventTypeId() != null) {
-                EventType et = eventTypeDAO.read(dto.eventTypeId());
+            if (body.containsKey("eventTypeId")) {
+                Long etId = parseLong(body.get("eventTypeId"));
+                EventType et = eventTypeDAO.read(etId);
                 if (et == null) throw new ApiRuntimeException(404, "EventType not found");
                 patch.setEventType(et);
             }
+            
             var updated = eventDAO.update(id, patch);
             if (updated == null) {
                 ctx.status(404).json("{\"msg\":\"Event not found\"}");
                 return;
             }
-            ctx.json(EventMapper.toDTO(updated));
+            ctx.json(mappingService.toMap(updated));
         } catch (ApiRuntimeException e) {
             ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
@@ -205,10 +177,8 @@ public class EventController implements IController<Event, Long> {
     public void readByCreator(Context ctx) {
         try {
             Long userId = Long.parseLong(ctx.pathParam("userId"));
-            var list = eventDAO.readByCreator(userId).stream()
-                    .map(EventMapper::toDTO)
-                    .collect(Collectors.toList());
-            ctx.json(list);
+            var list = eventDAO.readByCreator(userId);
+            ctx.json(mappingService.toMapList(list));
         } catch (NumberFormatException ex) {
             ctx.status(400).json("{\"msg\":\"Invalid userId\"}");
         } catch (Exception e) {
@@ -222,9 +192,8 @@ public class EventController implements IController<Event, Long> {
             var now = Instant.now();
             var list = eventDAO.readAll().stream()
                     .filter(e -> e.getStartAt() != null && !e.getStartAt().isBefore(now))
-                    .map(EventMapper::toDTO)
-                    .collect(Collectors.toList());
-            ctx.json(list);
+                    .toList();
+            ctx.json(mappingService.toMapList(list));
         } catch (Exception e) {
             logger.error("readUpcoming failed", e);
             ctx.status(500).json("{\"msg\":\"Internal error\"}");
@@ -234,23 +203,16 @@ public class EventController implements IController<Event, Long> {
     public void markSeen(Context ctx) {
         try {
             Long eventId = parseId(ctx);
-
             var tokenUser = ctx.attribute("user");
             String email = null;
-            if (tokenUser instanceof JwtUserDTO ju) {
-                email = ju.username();
-            } else if (tokenUser instanceof com.carebridge.dtos.UserDTO du) {
-                email = du.email();
-            }
+            if (tokenUser instanceof Map<?, ?> ju) email = (String) ju.get("username");
 
             if (email == null) throw new ApiRuntimeException(401, "Unauthorized");
-
             var user = userDAO.readByEmail(email);
             if (user == null) throw new ApiRuntimeException(401, "Unauthorized");
 
             eventDAO.addSeenByUser(eventId, user);
             ctx.status(204);
-
         } catch (ApiRuntimeException e) {
             ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
@@ -262,23 +224,16 @@ public class EventController implements IController<Event, Long> {
     public void unmarkSeen(Context ctx) {
         try {
             Long eventId = parseId(ctx);
-
             var tokenUser = ctx.attribute("user");
             String email = null;
-            if (tokenUser instanceof JwtUserDTO ju) {
-                email = ju.username();
-            } else if (tokenUser instanceof com.carebridge.dtos.UserDTO du) {
-                email = du.email();
-            }
+            if (tokenUser instanceof Map<?, ?> ju) email = (String) ju.get("username");
 
             if (email == null) throw new ApiRuntimeException(401, "Unauthorized");
-
             var user = userDAO.readByEmail(email);
             if (user == null) throw new ApiRuntimeException(401, "Unauthorized");
 
             eventDAO.removeSeenByUser(eventId, user);
             ctx.status(204);
-
         } catch (ApiRuntimeException e) {
             ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
         } catch (Exception e) {
@@ -287,22 +242,21 @@ public class EventController implements IController<Event, Long> {
         }
     }
 
-
     @Override
     public boolean validatePrimaryKey(Long id) {
         return id != null && id > 0;
     }
 
     @Override
-    public Event validateEntity(Context ctx) {
-        return ctx.bodyAsClass(Event.class);
+    public Event validateEntity(Context ctx) { return null; }
+
+    private Long parseLong(Object obj) {
+        if (obj instanceof Number n) return n.longValue();
+        if (obj instanceof String s) return Long.parseLong(s);
+        throw new ApiRuntimeException(400, "Invalid number format");
     }
 
     private Long parseId(Context ctx) {
-        try {
-            return Long.parseLong(ctx.pathParam("id"));
-        } catch (Exception ex) {
-            throw new ApiRuntimeException(400, "Invalid id");
-        }
+        try { return Long.parseLong(ctx.pathParam("id")); } catch (Exception ex) { throw new ApiRuntimeException(400, "Invalid id"); }
     }
 }

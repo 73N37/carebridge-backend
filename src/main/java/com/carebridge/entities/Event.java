@@ -75,8 +75,7 @@ public class Event extends BaseEntity {
     public Event() {
     }
 
-    public Event(String title, String description, Instant startAt,
-                 boolean showOnBoard, User createdBy, EventType eventType) {
+    public Event(String title, String description, Instant startAt, boolean showOnBoard, User createdBy, EventType eventType) {
         this.title = title;
         this.description = description;
         this.startAt = startAt;

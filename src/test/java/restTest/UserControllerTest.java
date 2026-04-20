@@ -1,12 +1,11 @@
 package restTest;
 
-import com.carebridge.dtos.LinkResidentsRequest;
-import com.carebridge.dtos.UserDTO;
 import com.carebridge.enums.Role;
 import io.javalin.http.ContentType;
 import org.junit.jupiter.api.*;
 
 import java.util.List;
+import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -32,7 +31,7 @@ public class UserControllerTest extends BaseRestTest {
     @Test
     @Order(2)
     public void testCreateUser() {
-        java.util.Map<String, Object> userMap = java.util.Map.of(
+        Map<String, Object> userMap = Map.of(
                 "name", "New User",
                 "email", "newuser@example.com",
                 "password", "password123",
@@ -79,7 +78,7 @@ public class UserControllerTest extends BaseRestTest {
     @Test
     @Order(6)
     public void testLinkResidents() {
-        java.util.Map<String, Object> guardianMap = java.util.Map.of(
+        Map<String, Object> guardianMap = Map.of(
                 "name", "Guardian Joe",
                 "email", "joe@example.com",
                 "password", "password123",
@@ -98,8 +97,10 @@ public class UserControllerTest extends BaseRestTest {
         Long joeId = ((Number) jId).longValue();
 
         // Create a resident to link
-        com.carebridge.dtos.CreateResidentRequestDTO residentReq = new com.carebridge.dtos.CreateResidentRequestDTO(
-            "Børge", "Børgesen", "121212-1212", null, null
+        Map<String, Object> residentReq = Map.of(
+            "firstName", "Børge",
+            "lastName", "Børgesen",
+            "cprNr", "121212-1212"
         );
 
         Object rId = given()
@@ -113,7 +114,7 @@ public class UserControllerTest extends BaseRestTest {
                 .extract().path("id");
         Long residentId = ((Number) rId).longValue();
 
-        LinkResidentsRequest linkRequest = new LinkResidentsRequest(List.of(residentId));
+        Map<String, Object> linkRequest = Map.of("residentIds", List.of(residentId));
 
         given()
                 .header("Authorization", "Bearer " + adminToken)

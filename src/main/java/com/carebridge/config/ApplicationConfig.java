@@ -46,14 +46,14 @@ public class ApplicationConfig {
             // 🌐 UNIVERSAL CRUD ROUTES (v3)
             initializeUniversalCrud();
             ApiBuilder.path("v3", () -> {
-                ApiBuilder.get("metadata", universalController::getMetadata);
+                ApiBuilder.get("metadata", universalController::getMetadata, com.carebridge.enums.Role.ANYONE);
                 ApiBuilder.path("{resource}", () -> {
-                    ApiBuilder.get(universalController::getAll);
-                    ApiBuilder.post(universalController::create);
+                    ApiBuilder.get(universalController::getAll, com.carebridge.enums.Role.ANYONE);
+                    ApiBuilder.post(universalController::create, com.carebridge.enums.Role.ANYONE);
                     ApiBuilder.path("{id}", () -> {
-                        ApiBuilder.get(universalController::getById);
-                        ApiBuilder.put(universalController::update);
-                        ApiBuilder.delete(universalController::delete);
+                        ApiBuilder.get(universalController::getById, com.carebridge.enums.Role.ANYONE);
+                        ApiBuilder.put(universalController::update, com.carebridge.enums.Role.ANYONE);
+                        ApiBuilder.delete(universalController::delete, com.carebridge.enums.Role.ANYONE);
                     });
                 });
             });

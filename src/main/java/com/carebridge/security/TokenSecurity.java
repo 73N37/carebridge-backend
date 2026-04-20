@@ -1,6 +1,5 @@
-package com.carebridge.dtos.security;
+package com.carebridge.security;
 
-import com.carebridge.dtos.JwtUserDTO;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
@@ -10,22 +9,19 @@ import com.nimbusds.jwt.SignedJWT;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class TokenSecurity implements ITokenSecurity {
 
     @Override
-    public JwtUserDTO getUserWithRolesFromToken(String token) throws ParseException {
+    public Map<String, Object> getUserWithRolesFromToken(String token) throws ParseException {
         var jwt = SignedJWT.parse(token);
         var claims = jwt.getJWTClaimsSet();
 
         String username = claims.getStringClaim("username");
         String rolesCsv = claims.getStringClaim("roles");
-
-        // Debug logging
-        System.out.println("Extracted username: " + username);
-        System.out.println("Extracted roles CSV: " + rolesCsv);
 
         if (rolesCsv == null || rolesCsv.isEmpty()) {
             throw new ParseException("No roles found in token", 0);
@@ -35,10 +31,10 @@ public class TokenSecurity implements ITokenSecurity {
                 .map(String::trim)
                 .collect(Collectors.toSet());
 
-        return JwtUserDTO.builder()
-                .username(username)
-                .roles(roles)
-                .build();
+        return Map.of(
+            "username", username,
+            "roles", roles
+        );
     }
 
     @Override
@@ -62,13 +58,12 @@ public class TokenSecurity implements ITokenSecurity {
     }
 
     @Override
-    public String createToken(JwtUserDTO user, String issuer, String expireMillis, String secret) {
+    public String createToken(String username, String rolesCsv, String issuer, String expireMillis, String secret) {
         try {
-            String rolesCsv = String.join(",", user.roles());
             var claims = new JWTClaimsSet.Builder()
-                    .subject(user.username())
+                    .subject(username)
                     .issuer(issuer)
-                    .claim("username", user.username())
+                    .claim("username", username)
                     .claim("roles", rolesCsv)
                     .expirationTime(new Date(new Date().getTime() + Long.parseLong(expireMillis)))
                     .build();

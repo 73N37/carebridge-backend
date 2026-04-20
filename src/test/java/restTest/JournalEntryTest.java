@@ -1,18 +1,18 @@
 package restTest;
 
-import com.carebridge.dtos.CreateJournalEntryRequestDTO;
-import com.carebridge.dtos.EditJournalEntryRequestDTO;
 import com.carebridge.enums.EntryType;
 import com.carebridge.enums.RiskAssessment;
 import io.javalin.http.ContentType;
 import org.junit.jupiter.api.*;
+
+import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class JournalEntryControllerTest extends BaseRestTest {
+public class JournalEntryTest extends BaseRestTest {
 
     private static Long createdEntryId;
     private static Long journalId;
@@ -20,8 +20,10 @@ public class JournalEntryControllerTest extends BaseRestTest {
     @BeforeAll
     public void setupLocal() {
         // Create a resident to get a journalId
-        com.carebridge.dtos.CreateResidentRequestDTO residentReq = new com.carebridge.dtos.CreateResidentRequestDTO(
-            "Børge", "Børgesen", "121212-1212", null, null
+        Map<String, Object> residentReq = Map.of(
+            "firstName", "Børge",
+            "lastName", "Børgesen",
+            "cprNr", "121212-1212"
         );
 
         Object jId = given()
@@ -39,8 +41,11 @@ public class JournalEntryControllerTest extends BaseRestTest {
     @Test
     @Order(1)
     public void testCreateJournalEntry() {
-        CreateJournalEntryRequestDTO req = new CreateJournalEntryRequestDTO(
-            journalId, null, "Morning Checkup", "Everything looks good.", EntryType.NOTE, RiskAssessment.LOW
+        Map<String, Object> req = Map.of(
+            "title", "Morning Checkup",
+            "content", "Everything looks good.",
+            "entryType", EntryType.NOTE,
+            "riskAssessment", RiskAssessment.LOW
         );
 
         Object idObj = given()
@@ -72,7 +77,7 @@ public class JournalEntryControllerTest extends BaseRestTest {
     @Test
     @Order(3)
     public void testUpdateJournalEntry() {
-        EditJournalEntryRequestDTO req = new EditJournalEntryRequestDTO("Updated content: Patient is resting.");
+        Map<String, Object> req = Map.of("content", "Updated content: Patient is resting.");
 
         given()
                 .header("Authorization", "Bearer " + adminToken)

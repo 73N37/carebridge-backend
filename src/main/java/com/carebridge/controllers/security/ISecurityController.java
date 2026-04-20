@@ -1,9 +1,9 @@
 package com.carebridge.controllers.security;
 
-import com.carebridge.dtos.JwtUserDTO;
 import io.javalin.http.Handler;
 import io.javalin.security.RouteRole;
 
+import java.util.Map;
 import java.util.Set;
 
 public interface ISecurityController {
@@ -13,9 +13,9 @@ public interface ISecurityController {
 
     Handler authenticate();
 
-    boolean authorize(JwtUserDTO userDTO, Set<RouteRole> allowedRoles);
+    boolean authorize(Map<String, Object> user, Set<RouteRole> allowedRoles);
 
-    String createToken(JwtUserDTO user) throws Exception;
+    String createToken(Map<String, Object> user) throws Exception;
 
-    JwtUserDTO verifyToken(String token) throws Exception;
+    Map<String, Object> verifyToken(String token) throws Exception;
 }

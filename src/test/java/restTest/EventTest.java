@@ -56,7 +56,7 @@ public class EventTest extends BaseRestTest {
         payload.put("showOnBoard", true);
         payload.put("eventTypeId", eventTypeId);
 
-        createdId =
+        Object idObj =
                 given()
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(io.javalin.http.ContentType.JSON)
@@ -67,6 +67,8 @@ public class EventTest extends BaseRestTest {
                         .statusCode(201)
                         .body("title", equalTo("New Test Event"))
                         .extract().path("id");
+        
+        createdId = ((Number) idObj).intValue();
 
         Assertions.assertTrue(createdId > 0);
     }

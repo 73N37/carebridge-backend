@@ -3,47 +3,42 @@ package com.carebridge.controllers.security;
 import com.carebridge.config.HibernateConfig;
 import com.carebridge.dao.security.ISecurityDAO;
 import com.carebridge.dao.security.SecurityDAO;
-import com.carebridge.dtos.AuthRequest;
-import com.carebridge.dtos.JwtUserDTO;
-import com.carebridge.dtos.RegisterUserDTO;
-import com.carebridge.dtos.UserDTO;
-import com.carebridge.dtos.security.ITokenSecurity;
-import com.carebridge.dtos.security.TokenSecurity;
-import com.carebridge.dtos.security.TokenVerificationException;
+import com.carebridge.security.ITokenSecurity;
+import com.carebridge.security.TokenSecurity;
 import com.carebridge.entities.User;
+import com.carebridge.enums.Role;
 import com.carebridge.exceptions.ApiRuntimeException;
-import com.carebridge.exceptions.NotAuthorizedException;
 import com.carebridge.exceptions.ValidationException;
-import com.carebridge.services.mappers.UserMapper;
 import com.carebridge.utils.Utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.javalin.http.Context;
 import io.javalin.http.Handler;
-import io.javalin.http.HttpStatus;
 import io.javalin.http.UnauthorizedResponse;
 import io.javalin.security.RouteRole;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.text.ParseException;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SecurityController implements ISecurityController {
+
     private static final Logger logger = LoggerFactory.getLogger(SecurityController.class);
-    private static ISecurityDAO securityDAO;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ITokenSecurity tokenSecurity = new TokenSecurity();
+    private static final ISecurityDAO securityDAO = new SecurityDAO(HibernateConfig.getEntityManagerFactory());
     private static SecurityController instance;
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final ITokenSecurity tokenSecurity = new TokenSecurity();
 
     private SecurityController() {
     }
 
-    public static synchronized SecurityController getInstance() {
-        if (instance == null) instance = new SecurityController();
-        securityDAO = new SecurityDAO(HibernateConfig.getEntityManagerFactory());
+    public static SecurityController getInstance() {
+        if (instance == null) {
+            instance = new SecurityController();
+        }
         return instance;
     }
 
@@ -52,24 +47,16 @@ public class SecurityController implements ISecurityController {
         return ctx -> {
             ObjectNode out = objectMapper.createObjectNode();
             try {
-                AuthRequest req = ctx.bodyAsClass(AuthRequest.class);
-                User verified = securityDAO.getVerifiedUser(req.email(), req.password());
+                Map<String, String> userJson = ctx.bodyAsClass(Map.class);
+                String email = userJson.get("email");
+                String password = userJson.get("password");
 
-                JwtUserDTO jwtUser = JwtUserDTO.builder()
-                        .username(verified.getEmail())
-                        .roles(Set.of(verified.getRole().name()))
-                        .build();
-
-                String token = createToken(jwtUser);
-                UserDTO safeUser = UserMapper.toDTO(verified);
-
-                ctx.status(200).json(out.put("token", token)
-                        .put("email", safeUser.email())
-                        .put("role", safeUser.role().name()));
+                User user = securityDAO.getVerifiedUser(email, password);
+                String token = createToken(Map.of("username", user.getEmail(), "roles", Set.of(user.getRole().name())));
+                ctx.status(200).json(out.put("token", token).put("email", email));
             } catch (ValidationException e) {
-                ctx.status(401).json(out.put("msg", e.getMessage()));
+                throw new ApiRuntimeException(401, e.getMessage());
             } catch (Exception e) {
-
                 logger.error("login failed", e);
                 ctx.status(500).json(out.put("msg", "Internal error"));
             }
@@ -81,115 +68,86 @@ public class SecurityController implements ISecurityController {
         return ctx -> {
             ObjectNode out = objectMapper.createObjectNode();
             try {
-                // Parse hele kroppen som RegisterUserDTO
-                RegisterUserDTO dto = ctx.bodyAsClass(RegisterUserDTO.class);
-
-                // Opret bruger i DB via SecurityDAO med alle felter
-                User created = securityDAO.createUser(
-                        dto.name(),
-                        dto.email(),
-                        dto.password(),
-                        dto.displayName(),
-                        dto.displayEmail(),
-                        dto.displayPhone(),
-                        dto.internalEmail(),
-                        dto.internalPhone(),
-                        dto.role()
+                Map<String, Object> body = ctx.bodyAsClass(Map.class);
+                
+                User user = securityDAO.createUser(
+                        (String) body.get("name"),
+                        (String) body.get("email"),
+                        (String) body.get("password"),
+                        (String) body.get("displayName"),
+                        (String) body.get("displayEmail"),
+                        (String) body.get("displayPhone"),
+                        (String) body.get("internalEmail"),
+                        (String) body.get("internalPhone"),
+                        Role.valueOf(((String) body.getOrDefault("role", "USER")).toUpperCase())
                 );
 
-                // Lav JWT
-                JwtUserDTO jwtUser = JwtUserDTO.builder()
-                        .username(created.getEmail())
-                        .roles(Set.of(created.getRole().name()))
-                        .build();
-
-                String token = createToken(jwtUser);
-
-                // Returnér token + bruger info
-                ctx.status(HttpStatus.CREATED).json(out
-                        .put("token", token)
-                        .put("email", created.getEmail())
-                        .put("role", created.getRole().name())
-                        .put("displayName", created.getDisplayName())
-                        .put("displayEmail", created.getDisplayEmail())
-                        .put("displayPhone", created.getDisplayPhone())
-                        .put("internalEmail", created.getInternalEmail())
-                        .put("internalPhone", created.getInternalPhone())
-                );
-            } catch (ApiRuntimeException e) {
-                ctx.status(e.getStatusCode()).json(out.put("msg", e.getMessage()));
+                String token = createToken(Map.of("username", user.getEmail(), "roles", Set.of(user.getRole().name())));
+                ctx.status(201).json(out.put("token", token).put("email", user.getEmail()));
             } catch (Exception e) {
-                logger.error("register failed", e);
-                ctx.status(500).json(out.put("msg", "Internal error"));
+                logger.error("Registration failed", e);
+                ctx.status(400).json(out.put("msg", e.getMessage()));
             }
         };
     }
 
-
-
-
     @Override
     public Handler authenticate() {
         return ctx -> {
-            if ("OPTIONS".equalsIgnoreCase(ctx.method().toString())) {
-                ctx.status(200);
-                return;
+            String token = ctx.header("Authorization");
+            if (token == null || token.isEmpty()) {
+                throw new UnauthorizedResponse("No token provided");
             }
-
-            String header = ctx.header("Authorization");
-            if (header == null || !header.startsWith("Bearer "))
-                throw new UnauthorizedResponse("Authorization header missing/malformed");
-
-            String token = header.substring("Bearer ".length());
-            JwtUserDTO verifiedTokenUser = verifyToken(token);
-            if (verifiedTokenUser == null) throw new UnauthorizedResponse("Invalid User or Token");
-
-            logger.info("User verified: {}", verifiedTokenUser.username());
+            token = token.replace("Bearer ", "");
+            if (!tokenSecurity.tokenIsValid(token, Utils.getPropertyValue("SECRET_KEY", "application.properties"))) {
+                throw new UnauthorizedResponse("Invalid token");
+            }
+            if (!tokenSecurity.tokenNotExpired(token)) {
+                throw new UnauthorizedResponse("Token expired");
+            }
+            Map<String, Object> verifiedTokenUser = verifyToken(token);
             ctx.attribute("user", verifiedTokenUser);
         };
     }
 
     @Override
-    public boolean authorize(JwtUserDTO user, Set<RouteRole> allowedRoles) {
+    public boolean authorize(Map<String, Object> user, Set<RouteRole> allowedRoles) {
         if (user == null) throw new UnauthorizedResponse("You need to log in, dude!");
+        Set<String> roles = (Set<String>) user.get("roles");
         var allowed = allowedRoles.stream().map(RouteRole::toString).collect(Collectors.toSet());
-        return user.roles().stream().map(String::toUpperCase).anyMatch(allowed::contains);
+        return roles.stream().map(String::toUpperCase).anyMatch(allowed::contains);
     }
 
     @Override
-    public String createToken(JwtUserDTO user) {
+    public String createToken(Map<String, Object> user) {
         try {
-            final boolean DEPLOYED = System.getenv("DEPLOYED") != null;
-            String ISSUER = DEPLOYED ? System.getenv("ISSUER") : Utils.getPropertyValue("ISSUER", "application.properties");
-            String EXPIRE = DEPLOYED ? System.getenv("TOKEN_EXPIRE_TIME") : Utils.getPropertyValue("TOKEN_EXPIRE_TIME", "application.properties");
-            String SECRET = DEPLOYED ? System.getenv("SECRET_KEY") : Utils.getPropertyValue("SECRET_KEY", "application.properties");
-
-            logger.info("Creating token with ISSUER={}, EXPIRE={}, SECRET={}", ISSUER, EXPIRE, SECRET != null ? "***" : "null");
-
-            return tokenSecurity.createToken(user, ISSUER, EXPIRE, SECRET);
+            String username = (String) user.get("username");
+            Set<String> roles = (Set<String>) user.get("roles");
+            String rolesCsv = String.join(",", roles);
+            return tokenSecurity.createToken(
+                    username,
+                    rolesCsv,
+                    Utils.getPropertyValue("ISSUER", "application.properties"),
+                    Utils.getPropertyValue("TOKEN_EXPIRE_TIME", "application.properties"),
+                    Utils.getPropertyValue("SECRET_KEY", "application.properties")
+            );
         } catch (Exception e) {
             logger.error("Token creation failed", e);
             throw new ApiRuntimeException(500, "Could not create token");
         }
     }
 
-
     @Override
-    public JwtUserDTO verifyToken(String token) {
-        boolean DEPLOYED = System.getenv("DEPLOYED") != null;
-        String SECRET = DEPLOYED ? System.getenv("SECRET_KEY") : Utils.getPropertyValue("SECRET_KEY", "application.properties");
-        try {
-            if (tokenSecurity.tokenIsValid(token, SECRET) && tokenSecurity.tokenNotExpired(token)) {
-                return tokenSecurity.getUserWithRolesFromToken(token);
-            } else {
-                throw new NotAuthorizedException(403, "Token is not valid");
-            }
-        } catch (ParseException | NotAuthorizedException | TokenVerificationException e) {
-            throw new ApiRuntimeException(401, "Unauthorized. Could not verify token");
+    public Map<String, Object> verifyToken(String token) throws Exception {
+        boolean valid = tokenSecurity.tokenIsValid(token, Utils.getPropertyValue("SECRET_KEY", "application.properties"));
+        if (valid) {
+            return tokenSecurity.getUserWithRolesFromToken(token);
+        } else {
+            throw new UnauthorizedResponse("Invalid token");
         }
     }
 
-    public @NotNull Handler addRole() {
+    public Handler addRole() {
         return ctx -> ctx.status(501).json("{\"msg\":\"Not implemented in enum-role model\"}");
     }
 

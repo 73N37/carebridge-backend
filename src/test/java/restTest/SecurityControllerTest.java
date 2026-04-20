@@ -1,10 +1,10 @@
 package restTest;
 
-import com.carebridge.dtos.AuthRequest;
-import com.carebridge.dtos.RegisterUserDTO;
 import com.carebridge.enums.Role;
 import io.javalin.http.ContentType;
 import org.junit.jupiter.api.*;
+
+import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -27,7 +27,10 @@ public class SecurityControllerTest extends BaseRestTest {
     @Test
     @Order(2)
     public void testLogin() {
-        AuthRequest loginReq = new AuthRequest("admin@carebridge.io", "admin");
+        Map<String, String> loginReq = Map.of(
+            "email", "admin@carebridge.io",
+            "password", "admin"
+        );
         given()
                 .contentType(ContentType.JSON)
                 .body(loginReq)
@@ -42,8 +45,12 @@ public class SecurityControllerTest extends BaseRestTest {
     @Test
     @Order(3)
     public void testRegister() {
-        RegisterUserDTO regReq = new RegisterUserDTO(
-            "New Doc", "doctor@carebridge.io", "doc123", "Dr. New", "dr@carebridge.io", "555-5555", "dr.internal@carebridge.io", "666-6666", Role.CAREWORKER
+        Map<String, Object> regReq = Map.of(
+            "name", "New Doc",
+            "email", "doctor@carebridge.io",
+            "password", "doc123",
+            "displayName", "Dr. New",
+            "role", Role.CAREWORKER.name()
         );
 
         given()

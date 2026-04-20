@@ -57,19 +57,24 @@ public class MappingService {
 
                     // 🛠️ SMART MAPPING FOR RELATIONSHIPS
                     if (value instanceof BaseEntity be) {
-                        // For linked entities, we just provide the ID to avoid recursion
+                        // 🛑 CRITICAL: Only provide the ID to avoid infinite recursion
                         result.put(field.getName() + "Id", be.getId());
                     } else if (value instanceof Collection<?> col) {
-                        // For collections, we provide a list of IDs or skip to avoid LazyInitializationException
-                        // In a more advanced version, we could use @Children to decide
-                        List<Object> ids = new ArrayList<>();
-                        for (Object item : col) {
-                            if (item instanceof BaseEntity be) {
-                                ids.add(be.getId());
+                        // 🛡️ Check if collection is initialized to avoid LazyInitializationException
+                        try {
+                            if (col != null && org.hibernate.Hibernate.isInitialized(col)) {
+                                List<Object> ids = new ArrayList<>();
+                                for (Object item : col) {
+                                    if (item instanceof BaseEntity be) {
+                                        ids.add(be.getId());
+                                    }
+                                }
+                                if (!ids.isEmpty()) {
+                                    result.put(field.getName() + "Ids", ids);
+                                }
                             }
-                        }
-                        if (!ids.isEmpty()) {
-                            result.put(field.getName() + "Ids", ids);
+                        } catch (Exception e) {
+                            log.warn("Lazy collection {} on {} could not be processed", field.getName(), entity.getClass().getSimpleName());
                         }
                     } else {
                         // Standard field (String, Long, Instant, etc.)
@@ -97,6 +102,33 @@ public class MappingService {
      * This is used for creating/updating entities from dynamic JSON input.
      */
     public <T> T toEntity(Map<String, Object> data, Class<T> entityClass) {
-        return objectMapper.convertValue(data, entityClass);
+        try {
+            // First conversion to get a basic object
+            T entity = objectMapper.convertValue(data, entityClass);
+            
+            // Second pass: Use reflection to fix fields that Jackson might have skipped or mis-mapped
+            for (Field field : entityClass.getDeclaredFields()) {
+                if (data.containsKey(field.getName())) {
+                    Object value = data.get(field.getName());
+                    if (value == null) continue;
+                    
+                    field.setAccessible(true);
+                    
+                    // Fix Instant
+                    if (field.getType().equals(java.time.Instant.class) && value instanceof String s) {
+                        field.set(entity, java.time.Instant.parse(s));
+                    }
+                    // Fix LocalDate
+                    else if (field.getType().equals(java.time.LocalDate.class) && value instanceof String s) {
+                        field.set(entity, java.time.LocalDate.parse(s));
+                    }
+                }
+            }
+            return entity;
+        } catch (Exception e) {
+            log.error("Failed to convert Map to entity {}", entityClass.getSimpleName(), e);
+            // Last resort fallback
+            return objectMapper.convertValue(data, entityClass);
+        }
     }
 }
