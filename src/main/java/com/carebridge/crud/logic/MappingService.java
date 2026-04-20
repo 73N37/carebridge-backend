@@ -3,9 +3,10 @@ package com.carebridge.crud.logic;
 import com.carebridge.crud.annotations.ExcludeFromDTO;
 import com.carebridge.crud.data.core.BaseEntity;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -15,14 +16,14 @@ import java.util.*;
  * Responsible for auto-generating "Virtual Records" (Maps) from Entities.
  * This makes manual DTO files obsolete for standard CRUD operations.
  */
+@Service
 public class MappingService {
 
     private static final Logger log = LoggerFactory.getLogger(MappingService.class);
     private final ObjectMapper objectMapper;
 
-    public MappingService() {
-        this.objectMapper = new ObjectMapper();
-        this.objectMapper.registerModule(new JavaTimeModule());
+    public MappingService(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -61,20 +62,16 @@ public class MappingService {
                         result.put(field.getName() + "Id", be.getId());
                     } else if (value instanceof Collection<?> col) {
                         // 🛡️ Check if collection is initialized to avoid LazyInitializationException
-                        try {
-                            if (col != null && org.hibernate.Hibernate.isInitialized(col)) {
-                                List<Object> ids = new ArrayList<>();
-                                for (Object item : col) {
-                                    if (item instanceof BaseEntity be) {
-                                        ids.add(be.getId());
-                                    }
-                                }
-                                if (!ids.isEmpty()) {
-                                    result.put(field.getName() + "Ids", ids);
+                        if (Hibernate.isInitialized(col)) {
+                            List<Object> ids = new ArrayList<>();
+                            for (Object item : col) {
+                                if (item instanceof BaseEntity be) {
+                                    ids.add(be.getId());
                                 }
                             }
-                        } catch (Exception e) {
-                            log.warn("Lazy collection {} on {} could not be processed", field.getName(), entity.getClass().getSimpleName());
+                            if (!ids.isEmpty()) {
+                                result.put(field.getName() + "Ids", ids);
+                            }
                         }
                     } else {
                         // Standard field (String, Long, Instant, etc.)
@@ -103,32 +100,10 @@ public class MappingService {
      */
     public <T> T toEntity(Map<String, Object> data, Class<T> entityClass) {
         try {
-            // First conversion to get a basic object
-            T entity = objectMapper.convertValue(data, entityClass);
-            
-            // Second pass: Use reflection to fix fields that Jackson might have skipped or mis-mapped
-            for (Field field : entityClass.getDeclaredFields()) {
-                if (data.containsKey(field.getName())) {
-                    Object value = data.get(field.getName());
-                    if (value == null) continue;
-                    
-                    field.setAccessible(true);
-                    
-                    // Fix Instant
-                    if (field.getType().equals(java.time.Instant.class) && value instanceof String s) {
-                        field.set(entity, java.time.Instant.parse(s));
-                    }
-                    // Fix LocalDate
-                    else if (field.getType().equals(java.time.LocalDate.class) && value instanceof String s) {
-                        field.set(entity, java.time.LocalDate.parse(s));
-                    }
-                }
-            }
-            return entity;
-        } catch (Exception e) {
-            log.error("Failed to convert Map to entity {}", entityClass.getSimpleName(), e);
-            // Last resort fallback
             return objectMapper.convertValue(data, entityClass);
+        } catch (Exception e) {
+            log.error("Failed to convert Map to entity {}: {}", entityClass.getSimpleName(), e.getMessage());
+            throw new RuntimeException("Conversion failed", e);
         }
     }
 }

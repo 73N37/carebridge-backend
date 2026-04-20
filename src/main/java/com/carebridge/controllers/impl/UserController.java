@@ -1,198 +1,123 @@
 package com.carebridge.controllers.impl;
 
-import com.carebridge.config.HibernateConfig;
-import com.carebridge.config.Populator;
-import com.carebridge.controllers.IController;
 import com.carebridge.dao.impl.ResidentDAO;
 import com.carebridge.dao.impl.UserDAO;
 import com.carebridge.entities.Resident;
 import com.carebridge.entities.User;
 import com.carebridge.exceptions.ApiRuntimeException;
 import com.carebridge.crud.logic.MappingService;
-import io.javalin.http.Context;
+import com.carebridge.config.Populator;
+import com.carebridge.crud.annotations.DynamicDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class UserController implements IController<User, Long> {
+@RestController
+@RequestMapping("/users")
+public class UserController {
 
-    private final UserDAO dao = UserDAO.getInstance();
-    private final UserDAO userDAO = UserDAO.getInstance();
-    private final ResidentDAO residentDAO = ResidentDAO.getInstance();
-    private final MappingService mappingService = new MappingService();
+    private final UserDAO userDAO;
+    private final ResidentDAO residentDAO;
+    private final MappingService mappingService;
+    private final Populator populator;
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    @Override
-    public void read(Context ctx) {
-        try {
-            Long id = parseId(ctx);
-            User user = dao.read(id);
-            if (user == null) {
-                ctx.status(404).json("{\"msg\":\"User not found\"}");
-                return;
-            }
-            ctx.json(mappingService.toMap(user));
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("Error", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
+    public UserController(UserDAO userDAO, ResidentDAO residentDAO, MappingService mappingService, Populator populator) {
+        this.userDAO = userDAO;
+        this.residentDAO = residentDAO;
+        this.mappingService = mappingService;
+        this.populator = populator;
+    }
+
+    @GetMapping("/{id}")
+    @DynamicDTO
+    public ResponseEntity<User> read(@PathVariable Long id) {
+        User user = userDAO.read(id);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
         }
+        return ResponseEntity.ok(user);
     }
 
-    @Override
-    public void readAll(Context ctx) {
-        try {
-            List<User> users = dao.readAll();
-            ctx.json(mappingService.toMapList(users));
-        } catch (Exception e) {
-            logger.error("Error", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
+    @GetMapping
+    @DynamicDTO
+    public List<User> readAll() {
+        return userDAO.readAll();
+    }
+
+    @PostMapping
+    @DynamicDTO
+    public ResponseEntity<User> create(@RequestBody Map<String, Object> body) {
+        User user = mappingService.toEntity(body, User.class);
+        if (body.containsKey("password")) {
+            user.setPassword((String) body.get("password"));
         }
+        User created = userDAO.create(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @Override
-    public void create(Context ctx) {
-        try {
-            Map<String, Object> body = ctx.bodyAsClass(Map.class);
-            User user = mappingService.toEntity(body, User.class);
-            
-            // Password needs special handling because it might be hash or raw
-            if (body.containsKey("password")) {
-                user.setPassword((String) body.get("password"));
-            }
-
-            User created = dao.create(user);
-            ctx.status(201).json(mappingService.toMap(created));
-        } catch (Exception e) {
-            logger.error("Error", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
+    @PutMapping("/{id}")
+    @DynamicDTO
+    public ResponseEntity<User> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        User user = mappingService.toEntity(body, User.class);
+        if (body.containsKey("password")) {
+            user.setPassword((String) body.get("password"));
         }
+        User updated = userDAO.update(id, user);
+        return ResponseEntity.ok(updated);
     }
 
-    @Override
-    public void update(Context ctx) {
-        try {
-            Long id = parseId(ctx);
-            Map<String, Object> body = ctx.bodyAsClass(Map.class);
-            User user = mappingService.toEntity(body, User.class);
-            
-            if (body.containsKey("password")) {
-                user.setPassword((String) body.get("password"));
-            }
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        userDAO.delete(id);
+    }
 
-            User updated = dao.update(id, user);
-            if (updated == null) {
-                ctx.status(404).json("{\"msg\":\"User not found\"}");
-                return;
-            }
-            ctx.json(mappingService.toMap(updated));
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("Error", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
+    @GetMapping("/me")
+    @DynamicDTO
+    public ResponseEntity<User> me(@RequestAttribute(value = "user", required = false) Map<String, Object> jwtUser) {
+        if (jwtUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-    }
-
-    @Override
-    public void delete(Context ctx) {
-        try {
-            Long id = parseId(ctx);
-            userDAO.delete(id);
-            ctx.status(204);
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("Error", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
+        String email = (String) jwtUser.get("username");
+        User user = userDAO.readByEmail(email);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
         }
+        return ResponseEntity.ok(user);
     }
 
-    public void me(Context ctx) {
-        try {
-            var jwtUser = ctx.attribute("user");
-            String email = null;
-            if (jwtUser instanceof Map<?, ?> ju) {
-                email = (String) ju.get("username");
-            }
+    @PostMapping("/populate")
+    public Map<String, String> populate() {
+        populator.populate();
+        return Map.of("msg", "Database populated");
+    }
 
-            if (email == null) {
-                ctx.status(401).json("{\"msg\":\"Unauthorized\"}");
-                return;
-            }
-
-            User user = userDAO.readByEmail(email);
-            if (user == null) {
-                ctx.status(404).json("{\"msg\":\"User not found\"}");
-                return;
-            }
-            ctx.json(mappingService.toMap(user));
-        } catch (Exception e) {
-            logger.error("Error", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
+    @PostMapping("/{id}/link-residents")
+    public Map<String, String> linkResidents(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        List<Number> residentIds = (List<Number>) body.get("residentIds");
+        User user = userDAO.read(id);
+        if (user == null) {
+            throw new ApiRuntimeException(404, "Bruger ikke fundet");
         }
-    }
 
-    public void populate(Context ctx) {
-        try {
-            Populator.populate(HibernateConfig.getEntityManagerFactory());
-            ctx.status(200).json(Map.of("msg", "Database populated"));
-        } catch (Exception e) {
-            logger.error("Error", e);
-            ctx.status(500).json(Map.of("msg", "Error during population: " + e.getMessage()));
-        }
-    }
-
-    public void linkResidents(Context ctx) {
-        try {
-            Long userId = Long.parseLong(ctx.pathParam("id"));
-            Map<String, Object> body = ctx.bodyAsClass(Map.class);
-            List<Number> residentIds = (List<Number>) body.get("residentIds");
-
-            User user = userDAO.read(userId);
-            if (user == null) {
-                ctx.status(404).json(Map.of("msg", "Bruger ikke fundet"));
-                return;
+        List<Resident> residentsToLink = new ArrayList<>();
+        for (Number residentId : residentIds) {
+            Resident r = residentDAO.read(residentId.longValue());
+            if (r != null) {
+                residentsToLink.add(r);
             }
-
-            // Hent residents
-            List<Resident> residentsToLink = new ArrayList<>();
-            for (Number residentId : residentIds) {
-                Resident r = residentDAO.read(residentId.longValue());
-                if (r != null) {
-                    residentsToLink.add(r);
-                }
-            }
-
-            user.setResidents(residentsToLink);
-            userDAO.update(userId, user);
-
-            ctx.status(200).json(Map.of("msg", "Beboere tilknyttet"));
-        } catch (Exception e) {
-            logger.error("Error", e);
-            ctx.status(500).json(Map.of("msg", "Kunne ikke tilknytte beboere"));
         }
-    }
 
-    @Override
-    public boolean validatePrimaryKey(Long id) {
-        return id != null && id > 0;
-    }
+        user.setResidents(residentsToLink);
+        userDAO.update(id, user);
 
-    private Long parseId(Context ctx) {
-        try {
-            return Long.parseLong(ctx.pathParam("id"));
-        } catch (NumberFormatException e) {
-            throw new ApiRuntimeException(400, "Invalid ID format");
-        }
-    }
-
-    @Override
-    public User validateEntity(Context ctx) {
-        return ctx.bodyAsClass(User.class);
+        return Map.of("msg", "Beboere tilknyttet");
     }
 }

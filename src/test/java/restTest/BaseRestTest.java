@@ -1,63 +1,71 @@
 package restTest;
 
-import com.carebridge.config.ApplicationConfig;
-import com.carebridge.config.HibernateConfig;
+import com.carebridge.CareBridgeApplication;
 import com.carebridge.config.Populator;
-import io.javalin.Javalin;
-import io.javalin.http.ContentType;
 import io.restassured.RestAssured;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.TestInstance;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.context.ActiveProfiles;
 
 import static io.restassured.RestAssured.given;
 
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = CareBridgeApplication.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ActiveProfiles("test")
 public abstract class BaseRestTest {
 
-    protected static Javalin app;
+    @LocalServerPort
+    protected int port;
+
+    @Autowired
+    protected Populator populator;
+
     protected static String userToken;
     protected static String adminToken;
 
     @BeforeAll
-    public static void setupBase() {
-        if (app == null) {
-            HibernateConfig.setTest(true);
-            app = ApplicationConfig.startServer(7070);
-            Populator.populate(HibernateConfig.getEntityManagerFactoryForTest());
-            RestAssured.baseURI = "http://localhost:7070/api";
+    public void setupBase() {
+        RestAssured.baseURI = "http://localhost:" + port + "/api";
+        
+        populator.populate();
 
-            // Get tokens
-            adminToken = login("admin@carebridge.io", "admin");
-
-            // Create and login as Alice
-            register("Alice", "alice@carebridge.io", "password123");
-            userToken = login("alice@carebridge.io", "password123");
-        }
+        // Get tokens
+        adminToken = login("admin@carebridge.io", "admin");
+        
+        // Create and login as Alice
+        register("Alice", "alice@carebridge.io", "password123");
+        userToken = login("alice@carebridge.io", "password123");
     }
 
-    private static String login(String email, String password) {
+    private String login(String email, String password) {
         return given()
-                .contentType(ContentType.JSON)
-                .body(String.format("{\"email\":\"%s\", \"password\":\"%s\"}", email, password))
+                .contentType("application/json")
+                .body(java.util.Map.of("email", email, "password", password))
                 .post("/auth/login")
                 .then()
                 .statusCode(200)
                 .extract().path("token");
     }
 
-    private static void register(String name, String email, String password) {
+    private void register(String name, String email, String password) {
         try {
             given()
                     .header("Authorization", "Bearer " + adminToken)
-                    .contentType(ContentType.JSON)
-                    .body(String.format("{\"name\":\"%s\", \"email\":\"%s\", \"password\":\"%s\", \"role\":\"USER\"}", name, email, password))
+                    .contentType("application/json")
+                    .body(java.util.Map.of(
+                        "name", name, 
+                        "email", email, 
+                        "password", password, 
+                        "role", "USER"
+                    ))
                     .post("/auth/register");
-            // We ignore the result, if it fails because user exists, login will still work
         } catch (Exception ignored) {}
     }
 
     static {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (app != null) app.stop();
-        }));
+        // Shutdown hook not needed for Spring Boot Test as it handles lifecycle
     }
 }

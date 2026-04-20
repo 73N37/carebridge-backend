@@ -1,7 +1,7 @@
 package restTest;
 
 import com.carebridge.enums.Role;
-import io.javalin.http.ContentType;
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.*;
 
 import java.util.List;
@@ -133,7 +133,7 @@ public class UserControllerTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .post("/populate")
+                .post("/users/populate")
                 .then()
                 .statusCode(200)
                 .body("msg", containsString("Database populated"));

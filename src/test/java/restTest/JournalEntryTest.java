@@ -2,7 +2,7 @@ package restTest;
 
 import com.carebridge.enums.EntryType;
 import com.carebridge.enums.RiskAssessment;
-import io.javalin.http.ContentType;
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.*;
 
 import java.util.Map;

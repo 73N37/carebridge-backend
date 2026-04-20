@@ -1,6 +1,5 @@
 package com.carebridge.controllers.impl;
 
-import com.carebridge.controllers.IController;
 import com.carebridge.dao.impl.EventDAO;
 import com.carebridge.dao.impl.EventTypeDAO;
 import com.carebridge.dao.impl.UserDAO;
@@ -9,72 +8,68 @@ import com.carebridge.entities.EventType;
 import com.carebridge.entities.User;
 import com.carebridge.exceptions.ApiRuntimeException;
 import com.carebridge.crud.logic.MappingService;
-import io.javalin.http.Context;
+import com.carebridge.crud.annotations.DynamicDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-public class EventController implements IController<Event, Long> {
+@RestController
+@RequestMapping("/events")
+public class EventController {
 
     private static final Logger logger = LoggerFactory.getLogger(EventController.class);
-    private final EventDAO eventDAO = EventDAO.getInstance();
-    private final EventTypeDAO eventTypeDAO = EventTypeDAO.getInstance();
-    private final UserDAO userDAO = UserDAO.getInstance();
-    private final MappingService mappingService = new MappingService();
+    private final EventDAO eventDAO;
+    private final EventTypeDAO eventTypeDAO;
+    private final UserDAO userDAO;
+    private final MappingService mappingService;
 
-    @Override
-    public void read(Context ctx) {
-        try {
-            Long id = parseId(ctx);
-            var entity = eventDAO.read(id);
-            if (entity == null) {
-                ctx.status(404).json("{\"msg\":\"Event not found\"}");
-                return;
-            }
-            ctx.json(mappingService.toMap(entity));
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("read event failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
-        }
+    public EventController(EventDAO eventDAO, EventTypeDAO eventTypeDAO, UserDAO userDAO, MappingService mappingService) {
+        this.eventDAO = eventDAO;
+        this.eventTypeDAO = eventTypeDAO;
+        this.userDAO = userDAO;
+        this.mappingService = mappingService;
     }
 
-    @Override
-    public void readAll(Context ctx) {
-        try {
-            String fromParam = ctx.queryParam("from");
-            String toParam = ctx.queryParam("to");
-            String tzParam = ctx.queryParam("tz");
-
-            if (fromParam != null || toParam != null) {
-                ZoneId zone = resolveZone(tzParam);
-                var today = LocalDate.now(zone);
-                LocalDate fromDate = parseDateKeywordOrIso(fromParam, today, 0);
-                LocalDate toDate = parseDateKeywordOrIso(toParam, today, 1);
-
-                Instant fromInstant = fromDate.atStartOfDay(zone).toInstant();
-                Instant toInstant = toDate.plusDays(1).atStartOfDay(zone).toInstant();
-
-                var list = eventDAO.readBetween(fromInstant, toInstant);
-                ctx.json(mappingService.toMapList(list));
-                return;
-            }
-
-            var list = eventDAO.readAll().stream()
-                    .sorted((a, b) -> a.getStartAt().compareTo(b.getStartAt()))
-                    .toList();
-            ctx.json(mappingService.toMapList(list));
-
-        } catch (Exception e) {
-            logger.error("readAll events failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
+    @GetMapping("/{id}")
+    @DynamicDTO
+    public ResponseEntity<Event> read(@PathVariable Long id) {
+        var entity = eventDAO.read(id);
+        if (entity == null) {
+            return ResponseEntity.notFound().build();
         }
+        return ResponseEntity.ok(entity);
+    }
+
+    @GetMapping
+    @DynamicDTO
+    public List<Event> readAll(
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) String tz) {
+        
+        if (from != null || to != null) {
+            ZoneId zone = resolveZone(tz);
+            var today = LocalDate.now(zone);
+            LocalDate fromDate = parseDateKeywordOrIso(from, today, 0);
+            LocalDate toDate = parseDateKeywordOrIso(to, today, 1);
+
+            Instant fromInstant = fromDate.atStartOfDay(zone).toInstant();
+            Instant toInstant = toDate.plusDays(1).atStartOfDay(zone).toInstant();
+
+            return eventDAO.readBetween(fromInstant, toInstant);
+        }
+
+        return eventDAO.readAll().stream()
+                .sorted((a, b) -> a.getStartAt().compareTo(b.getStartAt()))
+                .toList();
     }
 
     private ZoneId resolveZone(String tzParam) {
@@ -91,172 +86,81 @@ public class EventController implements IController<Event, Long> {
         };
     }
 
-    @Override
-    public void create(Context ctx) {
-        try {
-            Map<String, Object> body = ctx.bodyAsClass(Map.class);
-            Event e = mappingService.toEntity(body, Event.class);
-            
-            // 🛡️ Manual override for Java Time types which often fail in reflection-based Map -> Entity conversion
-            if (body.containsKey("startAt") && body.get("startAt") != null) {
-                e.setStartAt(Instant.parse((String) body.get("startAt")));
-            }
-
-            if (e.getTitle() == null || e.getTitle().isBlank()) throw new ApiRuntimeException(400, "title required");
-            if (e.getStartAt() == null) throw new ApiRuntimeException(400, "startAt required");
-
-            var tokenUser = ctx.attribute("user");
-            String email = null;
-            if (tokenUser instanceof Map<?, ?> ju) email = (String) ju.get("username");
-
-            if (email == null) throw new ApiRuntimeException(401, "Unauthorized");
-
-            User creator = userDAO.readByEmail(email);
-            if (creator == null) throw new ApiRuntimeException(401, "Unauthorized");
-
-            if (body.containsKey("eventTypeId")) {
-                Long etId = parseLong(body.get("eventTypeId"));
-                EventType et = eventTypeDAO.read(etId);
-                if (et == null) throw new ApiRuntimeException(404, "EventType not found");
-                e.setEventType(et);
-            }
-
-            e.setCreatedBy(creator);
-            var created = eventDAO.create(e);
-            ctx.status(201).json(mappingService.toMap(created));
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("create event failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
+    @PostMapping
+    @DynamicDTO
+    public ResponseEntity<Event> create(
+            @RequestBody Map<String, Object> body,
+            @RequestAttribute("user") Map<String, Object> jwtUser) {
+        
+        Event e = mappingService.toEntity(body, Event.class);
+        
+        if (body.containsKey("startAt") && body.get("startAt") != null) {
+            e.setStartAt(Instant.parse((String) body.get("startAt")));
         }
-    }
 
-    @Override
-    public void update(Context ctx) {
-        try {
-            Long id = parseId(ctx);
-            Map<String, Object> body = ctx.bodyAsClass(Map.class);
-            Event patch = mappingService.toEntity(body, Event.class);
+        String email = (String) jwtUser.get("username");
+        User creator = userDAO.readByEmail(email);
+        if (creator == null) throw new ApiRuntimeException(401, "Unauthorized");
 
-            if (body.containsKey("eventTypeId")) {
-                Long etId = parseLong(body.get("eventTypeId"));
-                EventType et = eventTypeDAO.read(etId);
-                if (et == null) throw new ApiRuntimeException(404, "EventType not found");
-                patch.setEventType(et);
-            }
-            
-            var updated = eventDAO.update(id, patch);
-            if (updated == null) {
-                ctx.status(404).json("{\"msg\":\"Event not found\"}");
-                return;
-            }
-            ctx.json(mappingService.toMap(updated));
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("update event failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
+        if (body.containsKey("eventTypeId")) {
+            Long etId = ((Number) body.get("eventTypeId")).longValue();
+            EventType et = eventTypeDAO.read(etId);
+            if (et == null) throw new ApiRuntimeException(404, "EventType not found");
+            e.setEventType(et);
         }
+
+        e.setCreatedBy(creator);
+        var created = eventDAO.create(e);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @Override
-    public void delete(Context ctx) {
-        try {
-            Long id = parseId(ctx);
-            eventDAO.delete(id);
-            ctx.status(204);
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("delete event failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
+    @PutMapping("/{id}")
+    @DynamicDTO
+    public ResponseEntity<Event> update(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        
+        Event patch = mappingService.toEntity(body, Event.class);
+
+        if (body.containsKey("eventTypeId")) {
+            Long etId = ((Number) body.get("eventTypeId")).longValue();
+            EventType et = eventTypeDAO.read(etId);
+            if (et == null) throw new ApiRuntimeException(404, "EventType not found");
+            patch.setEventType(et);
         }
+        
+        var updated = eventDAO.update(id, patch);
+        return ResponseEntity.ok(updated);
     }
 
-    public void readByCreator(Context ctx) {
-        try {
-            Long userId = Long.parseLong(ctx.pathParam("userId"));
-            var list = eventDAO.readByCreator(userId);
-            ctx.json(mappingService.toMapList(list));
-        } catch (NumberFormatException ex) {
-            ctx.status(400).json("{\"msg\":\"Invalid userId\"}");
-        } catch (Exception e) {
-            logger.error("readByCreator failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
-        }
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        eventDAO.delete(id);
     }
 
-    public void readUpcoming(Context ctx) {
-        try {
-            var now = Instant.now();
-            var list = eventDAO.readAll().stream()
-                    .filter(e -> e.getStartAt() != null && !e.getStartAt().isBefore(now))
-                    .toList();
-            ctx.json(mappingService.toMapList(list));
-        } catch (Exception e) {
-            logger.error("readUpcoming failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
-        }
+    @GetMapping("/upcoming")
+    @DynamicDTO
+    public List<Event> readUpcoming() {
+        var now = Instant.now();
+        return eventDAO.readAll().stream()
+                .filter(e -> e.getStartAt() != null && !e.getStartAt().isBefore(now))
+                .toList();
     }
 
-    public void markSeen(Context ctx) {
-        try {
-            Long eventId = parseId(ctx);
-            var tokenUser = ctx.attribute("user");
-            String email = null;
-            if (tokenUser instanceof Map<?, ?> ju) email = (String) ju.get("username");
-
-            if (email == null) throw new ApiRuntimeException(401, "Unauthorized");
-            var user = userDAO.readByEmail(email);
-            if (user == null) throw new ApiRuntimeException(401, "Unauthorized");
-
-            eventDAO.addSeenByUser(eventId, user);
-            ctx.status(204);
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("markSeen failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
-        }
+    @PostMapping("/{id}/mark-seen")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void markSeen(@PathVariable Long id, @RequestAttribute("user") Map<String, Object> jwtUser) {
+        String email = (String) jwtUser.get("username");
+        var user = userDAO.readByEmail(email);
+        eventDAO.addSeenByUser(id, user);
     }
 
-    public void unmarkSeen(Context ctx) {
-        try {
-            Long eventId = parseId(ctx);
-            var tokenUser = ctx.attribute("user");
-            String email = null;
-            if (tokenUser instanceof Map<?, ?> ju) email = (String) ju.get("username");
-
-            if (email == null) throw new ApiRuntimeException(401, "Unauthorized");
-            var user = userDAO.readByEmail(email);
-            if (user == null) throw new ApiRuntimeException(401, "Unauthorized");
-
-            eventDAO.removeSeenByUser(eventId, user);
-            ctx.status(204);
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("unmarkSeen failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
-        }
-    }
-
-    @Override
-    public boolean validatePrimaryKey(Long id) {
-        return id != null && id > 0;
-    }
-
-    @Override
-    public Event validateEntity(Context ctx) { return null; }
-
-    private Long parseLong(Object obj) {
-        if (obj instanceof Number n) return n.longValue();
-        if (obj instanceof String s) return Long.parseLong(s);
-        throw new ApiRuntimeException(400, "Invalid number format");
-    }
-
-    private Long parseId(Context ctx) {
-        try { return Long.parseLong(ctx.pathParam("id")); } catch (Exception ex) { throw new ApiRuntimeException(400, "Invalid id"); }
+    @DeleteMapping("/{id}/mark-seen")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unmarkSeen(@PathVariable Long id, @RequestAttribute("user") Map<String, Object> jwtUser) {
+        String email = (String) jwtUser.get("username");
+        var user = userDAO.readByEmail(email);
+        eventDAO.removeSeenByUser(id, user);
     }
 }

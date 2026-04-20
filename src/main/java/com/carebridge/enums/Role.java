@@ -1,8 +1,6 @@
 package com.carebridge.enums;
 
-import io.javalin.security.RouteRole;
-
-public enum Role implements RouteRole {
+public enum Role {
     ANYONE,
     USER,
     ADMIN,

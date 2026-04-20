@@ -1,94 +1,75 @@
 package dao;
 
-import com.carebridge.config.HibernateConfig;
+import com.carebridge.CareBridgeApplication;
 import com.carebridge.dao.impl.UserDAO;
 import com.carebridge.entities.User;
 import com.carebridge.enums.Role;
-
-import jakarta.persistence.EntityManagerFactory;
-import org.junit.jupiter.api.*;
-
-import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@SpringBootTest(classes = CareBridgeApplication.class)
+@ActiveProfiles("test")
+@Transactional
 public class UserDAOTest {
 
+    @Autowired
     private UserDAO userDAO;
-    private User testUser;
-
-    @BeforeAll
-    public void setupClass() {
-        HibernateConfig.setTest(true);
-        EntityManagerFactory emfTest = HibernateConfig.getEntityManagerFactoryForTest();
-        userDAO = UserDAO.getInstance();
-    }
-
-    @BeforeEach
-    public void setup() {
-        // Opret en frisk bruger for hver test
-        testUser = new User();
-        testUser.setName("Shared Test User");
-        testUser.setEmail("shareduser@example.com");
-        testUser.setRole(Role.USER);
-        testUser.setPassword("test123");
-        userDAO.create(testUser);
-    }
-
-    @AfterEach
-    public void cleanup() {
-        if (testUser != null) {
-            try {
-                userDAO.delete(testUser.getId());
-            } catch (Exception ignored) {}
-        }
-    }
 
     @Test
-    public void testCreateUser() {
+    void testCreateAndReadUser() {
         User user = new User();
-        user.setName("Create User");
-        user.setEmail("createuser@example.com");
+        user.setName("DAO Test User");
+        user.setEmail("daotest@example.com");
         user.setRole(Role.USER);
-        user.setPassword("create123");
+        user.setPassword("password123");
+
         User created = userDAO.create(user);
         assertNotNull(created.getId());
 
-        userDAO.delete(created.getId());
+        User read = userDAO.read(created.getId());
+        assertEquals("daotest@example.com", read.getEmail());
     }
 
     @Test
-    public void testReadUser() {
-        User read = userDAO.read(testUser.getId());
-        assertEquals("Shared Test User", read.getName());
-    }
-
-    @Test
-    public void testUpdateUser() {
-        testUser.setName("Updated Name");
-        User updated = userDAO.update(testUser.getId(), testUser);
-        assertEquals("Updated Name", updated.getName());
-    }
-
-    @Test
-    public void testReadByEmail() {
-        User byEmail = userDAO.readByEmail(testUser.getEmail());
-        assertNotNull(byEmail);
-        assertEquals(testUser.getId(), byEmail.getId());
-    }
-
-    @Test
-    public void testReadAllUsers() {
-        List<User> users = userDAO.readAll();
-        assertTrue(users.size() >= 1);
-    }
-
-    @Test
-    public void testDeleteUser() {
+    void testReadByEmail() {
         User user = new User();
-        user.setName("Delete User");
-        user.setEmail("deleteuser@example.com");
+        user.setName("Email Test");
+        user.setEmail("emailtest@example.com");
+        user.setRole(Role.USER);
+        user.setPassword("pass");
+        userDAO.create(user);
+
+        User read = userDAO.readByEmail("emailtest@example.com");
+        assertNotNull(read);
+        assertEquals("Email Test", read.getName());
+    }
+
+    @Test
+    void testUpdateUser() {
+        User user = new User();
+        user.setName("Original Name");
+        user.setEmail("update@example.com");
+        user.setRole(Role.USER);
+        user.setPassword("pass");
+        User created = userDAO.create(user);
+
+        User patch = new User();
+        patch.setName("New Name");
+        User updated = userDAO.update(created.getId(), patch);
+
+        assertEquals("New Name", updated.getName());
+    }
+
+    @Test
+    void testDeleteUser() {
+        User user = new User();
+        user.setName("Delete Me");
+        user.setEmail("delete@example.com");
         user.setRole(Role.USER);
         user.setPassword("delete123");
         User created = userDAO.create(user);

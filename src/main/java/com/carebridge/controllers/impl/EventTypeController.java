@@ -1,115 +1,66 @@
 package com.carebridge.controllers.impl;
 
-import com.carebridge.controllers.IController;
 import com.carebridge.dao.impl.EventTypeDAO;
 import com.carebridge.entities.EventType;
-import com.carebridge.exceptions.ApiRuntimeException;
 import com.carebridge.crud.logic.MappingService;
-import io.javalin.http.Context;
+import com.carebridge.crud.annotations.DynamicDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
-public class EventTypeController implements IController<EventType, Long> {
+@RestController
+@RequestMapping("/event-types")
+public class EventTypeController {
 
     private static final Logger logger = LoggerFactory.getLogger(EventTypeController.class);
-    private final EventTypeDAO eventTypeDAO = EventTypeDAO.getInstance();
-    private final MappingService mappingService = new MappingService();
+    private final EventTypeDAO eventTypeDAO;
+    private final MappingService mappingService;
 
-    @Override
-    public void read(Context ctx) {
-        try {
-            Long id = parseId(ctx);
-            var entity = eventTypeDAO.read(id);
-            if (entity == null) {
-                ctx.status(404).json("{\"msg\":\"EventType not found\"}");
-                return;
-            }
-            ctx.json(mappingService.toMap(entity));
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("read eventType failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
+    public EventTypeController(EventTypeDAO eventTypeDAO, MappingService mappingService) {
+        this.eventTypeDAO = eventTypeDAO;
+        this.mappingService = mappingService;
+    }
+
+    @GetMapping("/{id}")
+    @DynamicDTO
+    public ResponseEntity<EventType> read(@PathVariable Long id) {
+        var entity = eventTypeDAO.read(id);
+        if (entity == null) {
+            return ResponseEntity.notFound().build();
         }
+        return ResponseEntity.ok(entity);
     }
 
-    @Override
-    public void readAll(Context ctx) {
-        try {
-            var list = eventTypeDAO.readAll();
-            ctx.json(mappingService.toMapList(list));
-        } catch (Exception e) {
-            logger.error("readAll eventTypes failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
-        }
+    @GetMapping
+    @DynamicDTO
+    public List<EventType> readAll() {
+        return eventTypeDAO.readAll();
     }
 
-    @Override
-    public void create(Context ctx) {
-        try {
-            Map<String, Object> body = ctx.bodyAsClass(Map.class);
-            var entity = mappingService.toEntity(body, EventType.class);
-            var created = eventTypeDAO.create(entity);
-            ctx.status(201).json(mappingService.toMap(created));
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("create eventType failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
-        }
+    @PostMapping
+    @DynamicDTO
+    public ResponseEntity<EventType> create(@RequestBody Map<String, Object> body) {
+        var entity = mappingService.toEntity(body, EventType.class);
+        var created = eventTypeDAO.create(entity);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @Override
-    public void update(Context ctx) {
-        try {
-            Long id = parseId(ctx);
-            Map<String, Object> body = ctx.bodyAsClass(Map.class);
-            var patch = mappingService.toEntity(body, EventType.class);
-            var updated = eventTypeDAO.update(id, patch);
-            if (updated == null) {
-                ctx.status(404).json("{\"msg\":\"EventType not found\"}");
-                return;
-            }
-            ctx.json(mappingService.toMap(updated));
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("update eventType failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
-        }
+    @PutMapping("/{id}")
+    @DynamicDTO
+    public ResponseEntity<EventType> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        var patch = mappingService.toEntity(body, EventType.class);
+        var updated = eventTypeDAO.update(id, patch);
+        return ResponseEntity.ok(updated);
     }
 
-    @Override
-    public void delete(Context ctx) {
-        try {
-            Long id = parseId(ctx);
-            eventTypeDAO.delete(id);
-            ctx.status(204);
-        } catch (ApiRuntimeException e) {
-            ctx.status(e.getStatusCode()).json("{\"msg\":\"" + e.getMessage() + "\"}");
-        } catch (Exception e) {
-            logger.error("delete eventType failed", e);
-            ctx.status(500).json("{\"msg\":\"Internal error\"}");
-        }
-    }
-
-    @Override
-    public boolean validatePrimaryKey(Long id) {
-        return id != null && id > 0;
-    }
-
-    @Override
-    public EventType validateEntity(Context ctx) {
-        return ctx.bodyAsClass(EventType.class);
-    }
-
-    private Long parseId(Context ctx) {
-        try {
-            return Long.parseLong(ctx.pathParam("id"));
-        } catch (Exception e) {
-            throw new ApiRuntimeException(400, "Invalid id");
-        }
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        eventTypeDAO.delete(id);
     }
 }

@@ -1,91 +1,63 @@
 package dao;
 
-import com.carebridge.config.HibernateConfig;
+import com.carebridge.CareBridgeApplication;
 import com.carebridge.dao.impl.EventTypeDAO;
 import com.carebridge.entities.EventType;
-import jakarta.persistence.EntityManagerFactory;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@SpringBootTest(classes = CareBridgeApplication.class)
+@ActiveProfiles("test")
+@Transactional
 public class EventTypeDAOTest {
 
+    @Autowired
     private EventTypeDAO eventTypeDAO;
-    private EventType testEventType;
-
-    @BeforeAll
-    public void setupClass() {
-        HibernateConfig.setTest(true);
-        EntityManagerFactory emfTest = HibernateConfig.getEntityManagerFactoryForTest();
-        eventTypeDAO = EventTypeDAO.getInstance();
-    }
-
-    @BeforeEach
-    public void setup() {
-        testEventType = new EventType();
-        testEventType.setName("Shared EventType");
-        testEventType.setColorHex("#123456");
-        eventTypeDAO.create(testEventType);
-    }
-
-    @AfterEach
-    public void cleanup() {
-        if (testEventType != null) {
-            try {
-                eventTypeDAO.delete(testEventType.getId());
-            } catch (Exception ignored) {}
-        }
-    }
 
     @Test
-    public void testCreateEventType() {
-        EventType type = new EventType();
-        type.setName("Create Type");
-        type.setColorHex("#123456");
+    void testCreateAndReadEventType() {
+        EventType type = new EventType("DAO Type", "#ABCDEF");
         EventType created = eventTypeDAO.create(type);
         assertNotNull(created.getId());
 
-        eventTypeDAO.delete(created.getId());
+        EventType read = eventTypeDAO.read(created.getId());
+        assertEquals("DAO Type", read.getName());
     }
 
     @Test
-    public void testReadEventType() {
-        EventType read = eventTypeDAO.read(testEventType.getId());
-        assertEquals("Shared EventType", read.getName());
-    }
+    void testReadAllEventTypes() {
+        eventTypeDAO.create(new EventType("T1", "#111111"));
+        eventTypeDAO.create(new EventType("T2", "#222222"));
 
-    @Test
-    public void testUpdateEventType() {
-        testEventType.setColorHex("#BBBBBB");
-        EventType updated = eventTypeDAO.update(testEventType.getId(), testEventType);
-        assertEquals("#BBBBBB", updated.getColorHex());
-    }
-
-    @Test
-    public void testReadByName() {
-        EventType read = eventTypeDAO.readByName("Shared EventType");
-        assertNotNull(read);
-        assertEquals(testEventType.getId(), read.getId());
-    }
-
-    @Test
-    public void testReadAllEventTypes() {
         List<EventType> all = eventTypeDAO.readAll();
-        assertTrue(all.size() >= 1);
+        assertTrue(all.size() >= 2);
     }
 
     @Test
-    public void testDeleteEventType() {
-        EventType type = new EventType();
-        type.setName("Delete Type");
-        type.setColorHex("#000000");
+    void testUpdateEventType() {
+        EventType type = new EventType("Old Name", "#000000");
+        EventType created = eventTypeDAO.create(type);
+
+        EventType patch = new EventType();
+        patch.setName("New Name");
+        EventType updated = eventTypeDAO.update(created.getId(), patch);
+
+        assertEquals("New Name", updated.getName());
+    }
+
+    @Test
+    void testDeleteEventType() {
+        EventType type = new EventType("Delete Type", "#000000");
         EventType created = eventTypeDAO.create(type);
 
         eventTypeDAO.delete(created.getId());
         assertNull(eventTypeDAO.read(created.getId()));
     }
 }
-

@@ -23,7 +23,7 @@ public class EventTest extends BaseRestTest {
         
         eventTypeId = given()
                 .header("Authorization", "Bearer " + adminToken)
-                .contentType(io.javalin.http.ContentType.JSON)
+                .contentType(io.restassured.http.ContentType.JSON)
                 .body(typePayload)
                 .when()
                 .post("/event-types")
@@ -59,7 +59,7 @@ public class EventTest extends BaseRestTest {
         Object idObj =
                 given()
                         .header("Authorization", "Bearer " + adminToken)
-                        .contentType(io.javalin.http.ContentType.JSON)
+                        .contentType(io.restassured.http.ContentType.JSON)
                         .body(payload)
                         .when()
                         .post("/events")
@@ -93,7 +93,7 @@ public class EventTest extends BaseRestTest {
 
         given()
                 .header("Authorization", "Bearer " + adminToken)
-                .contentType(io.javalin.http.ContentType.JSON)
+                .contentType(io.restassured.http.ContentType.JSON)
                 .body(updatePayload)
                 .when()
                 .put("/events/" + createdId)

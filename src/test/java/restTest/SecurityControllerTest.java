@@ -1,7 +1,7 @@
 package restTest;
 
 import com.carebridge.enums.Role;
-import io.javalin.http.ContentType;
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.*;
 
 import java.util.Map;

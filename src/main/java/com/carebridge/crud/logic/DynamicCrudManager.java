@@ -6,17 +6,21 @@ import com.carebridge.crud.data.core.BaseEntity;
 import com.carebridge.crud.data.core.GenericRepository;
 import com.carebridge.crud.logic.core.BaseService;
 import com.carebridge.crud.logic.core.CrudInterceptor;
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import org.reflections.Reflections;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.lang.reflect.Field;
-import java.net.URL;
 import java.util.*;
 
 /**
@@ -24,19 +28,26 @@ import java.util.*;
  * The heart of the Universal CRUD system. Discovers entities, builds metadata,
  * and initializes universal DAOs/Services.
  */
+@Component
 public class DynamicCrudManager {
 
     private static final Logger log = LoggerFactory.getLogger(DynamicCrudManager.class);
     private final Map<String, ResourceMetadata<?>> resources = new HashMap<>();
     private final Map<Class<?>, CrudInterceptor<?>> interceptors = new HashMap<>();
-    private final EntityManager entityManager;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
-    public DynamicCrudManager(EntityManager entityManager) {
-        this.entityManager = entityManager;
+    public DynamicCrudManager() {
     }
 
     public void registerInterceptor(Class<?> entityClass, CrudInterceptor<?> interceptor) {
         interceptors.put(entityClass, interceptor);
+    }
+
+    @PostConstruct
+    public void init() {
+        discoverAndRegister("com.carebridge.entities");
     }
 
     /**
@@ -44,25 +55,20 @@ public class DynamicCrudManager {
      */
     public void discoverAndRegister(String packageName) {
         try {
-            String path = packageName.replace('.', '/');
-            Enumeration<URL> urls = Thread.currentThread().getContextClassLoader().getResources(path);
-            while (urls.hasMoreElements()) {
-                URL resource = urls.nextElement();
-                File directory = new File(resource.getFile().replace("%20", " "));
-                if (directory.exists()) {
-                    File[] files = directory.listFiles();
-                    if (files != null) {
-                        for (File file : files) {
-                            if (file.getName().endsWith(".class")) {
-                                String className = packageName + "." + file.getName().substring(0, file.getName().length() - 6);
-                                Class<?> clazz = Class.forName(className);
-                                if (clazz.isAnnotationPresent(CrudResource.class)) {
-                                    registerResource(clazz);
-                                }
-                            }
-                        }
-                    }
-                }
+            log.info("🔍 [UNIVERSAL CRUD] Scanning package: [{}] for @CrudResource", packageName);
+            
+            ConfigurationBuilder config = new ConfigurationBuilder()
+                    .forPackages(packageName)
+                    .addScanners(org.reflections.scanners.Scanners.TypesAnnotated)
+                    .addUrls(ClasspathHelper.forPackage(packageName))
+                    .addUrls(ClasspathHelper.forJavaClassPath());
+            
+            Reflections reflections = new Reflections(config);
+            
+            Set<Class<?>> annotated = reflections.getTypesAnnotatedWith(CrudResource.class);
+            log.info("🔍 [UNIVERSAL CRUD] Found {} annotated classes: {}", annotated.size(), annotated);
+            for (Class<?> clazz : annotated) {
+                registerResource(clazz);
             }
         } catch (Exception e) {
             log.error("Failed to discover resources in package: " + packageName, e);
@@ -88,12 +94,7 @@ public class DynamicCrudManager {
         GenericRepository<T> repository = new GenericRepository<>(entityClass, entityManager);
 
         // Standard Generic Service
-        BaseService<T> service = new BaseService<T>() {
-            @Override
-            protected GenericRepository<T> getRepository() {
-                return repository;
-            }
-        };
+        BaseService<T> service = new BaseService<>(entityClass);
 
         CrudInterceptor<T> interceptor = (CrudInterceptor<T>) interceptors.getOrDefault(entityClass, new CrudInterceptor<T>() {});
         List<ResourceMetadata.FieldInfo> fieldMetadata = inspectFields(inspectionClass);
@@ -113,11 +114,9 @@ public class DynamicCrudManager {
 
     private List<ResourceMetadata.FieldInfo> inspectFields(Class<?> clazz) {
         List<ResourceMetadata.FieldInfo> infos = new ArrayList<>();
-        // Inspect all fields including inherited ones from BaseEntity
         Class<?> current = clazz;
         while (current != null && current != Object.class) {
             for (Field field : current.getDeclaredFields()) {
-                // 🌐 @ExcludeFromMeta Check
                 if (field.isAnnotationPresent(ExcludeFromMeta.class)) {
                     continue;
                 }

@@ -21,7 +21,7 @@ public class EventTypeTest extends BaseRestTest {
 
         createdEventTypeId = given()
                 .header("Authorization", "Bearer " + adminToken)
-                .contentType(io.javalin.http.ContentType.JSON)
+                .contentType(io.restassured.http.ContentType.JSON)
                 .body(payload)
                 .when()
                 .post("/event-types")
@@ -52,7 +52,7 @@ public class EventTypeTest extends BaseRestTest {
 
         given()
                 .header("Authorization", "Bearer " + adminToken)
-                .contentType(io.javalin.http.ContentType.JSON)
+                .contentType(io.restassured.http.ContentType.JSON)
                 .body(payload)
                 .when()
                 .put("/event-types/" + createdEventTypeId)

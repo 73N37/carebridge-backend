@@ -4,6 +4,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,10 +27,10 @@ public class GenericRepository<T extends BaseEntity> {
         return entityManager.createQuery("FROM " + entityClass.getSimpleName(), entityClass).getResultList();
     }
 
-    public List<T> findAll(int offset, int limit) {
+    public List<T> findAll(int page, int size) {
         TypedQuery<T> query = entityManager.createQuery("FROM " + entityClass.getSimpleName(), entityClass);
-        query.setFirstResult(offset);
-        query.setMaxResults(limit);
+        query.setFirstResult(page * size);
+        query.setMaxResults(size);
         return query.getResultList();
     }
 
@@ -37,33 +38,21 @@ public class GenericRepository<T extends BaseEntity> {
         return Optional.ofNullable(entityManager.find(entityClass, id));
     }
 
+    @Transactional
     public T save(T entity) {
-        entityManager.getTransaction().begin();
-        try {
-            if (entity.getId() == null) {
-                entityManager.persist(entity);
-            } else {
-                entity = entityManager.merge(entity);
-            }
-            entityManager.getTransaction().commit();
+        if (entity.getId() == null) {
+            entityManager.persist(entity);
             return entity;
-        } catch (Exception e) {
-            entityManager.getTransaction().rollback();
-            throw e;
+        } else {
+            return entityManager.merge(entity);
         }
     }
 
+    @Transactional
     public void deleteById(Long id) {
-        entityManager.getTransaction().begin();
-        try {
-            T entity = entityManager.find(entityClass, id);
-            if (entity != null) {
-                entityManager.remove(entity);
-            }
-            entityManager.getTransaction().commit();
-        } catch (Exception e) {
-            entityManager.getTransaction().rollback();
-            throw e;
+        T entity = entityManager.find(entityClass, id);
+        if (entity != null) {
+            entityManager.remove(entity);
         }
     }
 

@@ -1,47 +1,76 @@
 package com.carebridge.crud.logic.core;
 
 import com.carebridge.crud.data.core.BaseEntity;
-import com.carebridge.crud.data.core.GenericRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
  * [LOGIC LAYER]
- * A generic service that provides standard CRUD operations.
+ * A universal service that uses EntityManager directly to perform generic CRUD.
  */
-public abstract class BaseService<T extends BaseEntity> {
+public class BaseService<T extends BaseEntity> {
     
-    protected abstract GenericRepository<T> getRepository();
+    @PersistenceContext
+    protected EntityManager em;
+    
+    protected final Class<T> entityClass;
+
+    public BaseService(Class<T> entityClass) {
+        this.entityClass = entityClass;
+    }
 
     public List<T> findAll() {
-        return getRepository().findAll();
+        return em.createQuery("FROM " + entityClass.getSimpleName(), entityClass).getResultList();
     }
 
     public Page<T> findAll(int page, int size) {
-        List<T> content = getRepository().findAll(page * size, size);
-        long totalElements = getRepository().count();
+        TypedQuery<T> query = em.createQuery("FROM " + entityClass.getSimpleName(), entityClass);
+        query.setFirstResult(page * size);
+        query.setMaxResults(size);
+        
+        List<T> content = query.getResultList();
+        
+        long totalElements = em.createQuery("SELECT count(e) FROM " + entityClass.getSimpleName() + " e", Long.class)
+                .getSingleResult();
+                
         return new Page<>(content, totalElements);
     }
 
     public Optional<T> findById(Long id) {
-        return getRepository().findById(id);
+        return Optional.ofNullable(em.find(entityClass, id));
     }
 
+    @Transactional
     public T save(T entity) {
-        return getRepository().save(entity);
+        if (entity.getId() == null) {
+            em.persist(entity);
+            return entity;
+        } else {
+            return em.merge(entity);
+        }
     }
 
+    @Transactional
     public T update(Long id, T entity) {
-        if (!getRepository().existsById(id)) {
+        T existing = em.find(entityClass, id);
+        if (existing == null) {
             throw new RuntimeException("Entity not found with id: " + id);
         }
         entity.setId(id);
-        return getRepository().save(entity);
+        return em.merge(entity);
     }
 
+    @Transactional
     public void deleteById(Long id) {
-        getRepository().deleteById(id);
+        T entity = em.find(entityClass, id);
+        if (entity != null) {
+            em.remove(entity);
+        }
     }
 
     public static class Page<T> {

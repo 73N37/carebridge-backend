@@ -1,31 +1,42 @@
 package com.carebridge.controllers.impl;
 
-import com.carebridge.controllers.IController;
 import com.carebridge.dao.impl.ResidentDAO;
 import com.carebridge.dao.impl.UserDAO;
 import com.carebridge.entities.Journal;
 import com.carebridge.entities.Resident;
 import com.carebridge.entities.User;
 import com.carebridge.crud.logic.MappingService;
-import io.javalin.http.Context;
+import com.carebridge.crud.annotations.DynamicDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-public class ResidentController implements IController<Resident, Long> {
+@RestController
+@RequestMapping("/residents")
+public class ResidentController {
 
     private static final Logger logger = LoggerFactory.getLogger(ResidentController.class);
-    private final ResidentDAO residentDAO = ResidentDAO.getInstance();
-    private final UserDAO userDAO = UserDAO.getInstance();
-    private final MappingService mappingService = new MappingService();
+    private final ResidentDAO residentDAO;
+    private final UserDAO userDAO;
+    private final MappingService mappingService;
 
-    public ResidentController() {
+    public ResidentController(ResidentDAO residentDAO, UserDAO userDAO, MappingService mappingService) {
+        this.residentDAO = residentDAO;
+        this.userDAO = userDAO;
+        this.mappingService = mappingService;
     }
 
-    public void create(Context ctx) {
+    @PostMapping("/create")
+    @DynamicDTO
+    public ResponseEntity<Resident> create(
+            @RequestBody Map<String, Object> body,
+            @RequestAttribute(value = "user", required = false) Map<String, Object> jwtUser) {
+        
         try {
-            Map<String, Object> body = ctx.bodyAsClass(Map.class);
             Resident resident = mappingService.toEntity(body, Resident.class);
 
             if (resident.getFirstName() == null || resident.getFirstName().isBlank()) {
@@ -35,18 +46,12 @@ public class ResidentController implements IController<Resident, Long> {
                 throw new IllegalArgumentException("lastName is required");
             }
 
-            // create single linked journal
             Journal journal = new Journal();
             resident.setJournal(journal);
             journal.setResident(resident);
 
-            var tokenUser = ctx.attribute("user");
-            String email = null;
-            if (tokenUser instanceof Map<?, ?> ju) {
-                email = (String) ju.get("username");
-            }
-
-            if (email != null) {
+            if (jwtUser != null) {
+                String email = (String) jwtUser.get("username");
                 User user = userDAO.readByEmail(email);
                 if (user != null) {
                     resident.addUser(user);
@@ -54,37 +59,12 @@ public class ResidentController implements IController<Resident, Long> {
             }
 
             Resident created = residentDAO.create(resident);
-            Map<String, Object> resp = mappingService.toMap(created);
-
-            ctx.status(201);
-            ctx.header("Location", "/api/residents/" + created.getId());
-            ctx.json(resp);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .header("Location", "/api/residents/" + created.getId())
+                    .body(created);
 
         } catch (IllegalArgumentException e) {
-            ctx.status(400).result(e.getMessage());
-        } catch (Exception e) {
-            logger.error("Failed to create resident", e);
-            ctx.status(500).result("Internal server error");
+            return ResponseEntity.badRequest().build();
         }
     }
-
-    @Override
-    public void delete(Context ctx) { throw new UnsupportedOperationException(); }
-
-    @Override
-    public boolean validatePrimaryKey(Long id) {
-        return id != null && id > 0;
-    }
-
-    @Override
-    public Resident validateEntity(Context ctx) { return null; }
-
-    @Override
-    public void read(Context ctx) { throw new UnsupportedOperationException(); }
-
-    @Override
-    public void readAll(Context ctx) { throw new UnsupportedOperationException(); }
-
-    @Override
-    public void update(Context ctx) { throw new UnsupportedOperationException(); }
 }
