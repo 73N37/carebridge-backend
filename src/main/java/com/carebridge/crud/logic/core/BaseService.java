@@ -15,13 +15,12 @@ import java.util.Optional;
  */
 public class BaseService<T extends BaseEntity> {
     
-    @PersistenceContext
-    protected EntityManager em;
-    
+    protected final EntityManager em;
     protected final Class<T> entityClass;
 
-    public BaseService(Class<T> entityClass) {
+    public BaseService(Class<T> entityClass, EntityManager em) {
         this.entityClass = entityClass;
+        this.em = em;
     }
 
     public List<T> findAll() {

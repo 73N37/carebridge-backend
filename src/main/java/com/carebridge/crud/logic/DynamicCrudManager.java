@@ -94,7 +94,7 @@ public class DynamicCrudManager {
         GenericRepository<T> repository = new GenericRepository<>(entityClass, entityManager);
 
         // Standard Generic Service
-        BaseService<T> service = new BaseService<>(entityClass);
+        BaseService<T> service = new BaseService<>(entityClass, entityManager);
 
         CrudInterceptor<T> interceptor = (CrudInterceptor<T>) interceptors.getOrDefault(entityClass, new CrudInterceptor<T>() {});
         List<ResourceMetadata.FieldInfo> fieldMetadata = inspectFields(inspectionClass);

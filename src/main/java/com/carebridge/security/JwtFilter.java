@@ -39,14 +39,12 @@ public class JwtFilter extends OncePerRequestFilter {
                             .collect(Collectors.toList());
 
                     var auth = new UsernamePasswordAuthenticationToken(username, null, authorities);
-                    auth.setDetails(userMap); // Put the map in details
+                    auth.setDetails(userMap); 
                     SecurityContextHolder.getContext().setAuthentication(auth);
-                    
-                    // Legacy support for @RequestAttribute("user")
                     request.setAttribute("user", userMap);
                 }
             } catch (Exception e) {
-                // Invalid token, just continue without auth
+                // Invalid token, just continue
             }
         }
 
