@@ -86,3 +86,58 @@ We use the **@DynamicDTO** pattern to keep controllers clean:
 - **`SecurityConfig.java`**: Defines the security filter chain, CORS policy, and public/private endpoint rules.
 - **`JwtFilter.java`**: Intercepts requests to verify JWT tokens and populate the authenticated user context.
 - **`TokenSecurity.java`**: Core logic for generating and parsing signed JWT tokens using the Nimbus library.
+
+---
+
+## 🛣️ Section 4: API Endpoints
+
+All endpoints are prefixed with `/api`.
+
+### 🔐 Authentication (`/auth`)
+| Method | Path | Description | Access |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/login` | Log in and receive a JWT token | Public |
+| `POST` | `/auth/register` | Register a new user | Public |
+| `GET` | `/auth/healthcheck` | Verify the API status | Public |
+
+### 🚀 Universal CRUD v3 (`/v3`)
+*Note: `{resource}` can be `users`, `residents`, `events`, `event-types`, `journals`, or `journal-entries`.*
+
+| Method | Path | Description | Access |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/v3/metadata` | Get field and type info for all entities | Public |
+| `GET` | `/v3/{resource}` | Get all items (supports `page` & `size`) | Anyone |
+| `GET` | `/v3/{resource}/{id}` | Get a single item by ID | Anyone |
+| `POST` | `/v3/{resource}` | Create a new item | Anyone |
+| `PUT` | `/v3/{resource}/{id}` | Update an existing item | Anyone |
+| `DELETE` | `/v3/{resource}/{id}` | Remove an item | Anyone |
+
+### 👥 User Management (`/users`)
+| Method | Path | Description | Access |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/users` | List all users | Admin |
+| `GET` | `/users/{id}` | Get details of a specific user | Admin |
+| `GET` | `/users/me` | Get details of the logged-in user | User |
+| `POST` | `/users` | Create a new user | Admin |
+| `PUT` | `/users/{id}` | Update a user's details | Admin |
+| `DELETE` | `/users/{id}` | Delete a user | Admin |
+| `POST` | `/users/populate` | Reset and seed the database | Public |
+| `POST` | `/users/{id}/link-residents` | Assign residents to a guardian | Admin |
+
+### 📅 Events (`/events`)
+| Method | Path | Description | Access |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/events` | List all events (supports `from`, `to`, `tz`) | User |
+| `GET` | `/events/upcoming` | List only future events | User |
+| `POST` | `/events` | Create a new event | User |
+| `POST` | `/events/{id}/mark-seen` | Mark an event as acknowledged | User |
+| `DELETE` | `/events/{id}/mark-seen` | Unmark an event | User |
+
+### 🏥 Residents & Journals (`/residents`, `/journals`)
+| Method | Path | Description | Access |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/residents/create` | Create a resident and auto-link a journal | Admin |
+| `GET` | `/journals/{jid}/journal-entries` | List all entries for a journal | User |
+| `POST` | `/journals/{jid}/journal-entries` | Create a new entry in a journal | User |
+| `GET` | `/journals/{jid}/journal-entries/{eid}` | Get specific entry details | User |
+| `PUT` | `/journals/{jid}/journal-entries/{eid}` | Edit an entry (24h window) | User |
