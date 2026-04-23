@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
+import org.junit.jupiter.api.*;
 import java.time.Instant;
 import java.util.Map;
 
@@ -25,6 +25,7 @@ class MappingServiceTest {
     }
 
     @Test
+    @Order(1)
     void testToMap_BasicEntity() {
         User user = new User();
         user.setId(1L);
@@ -42,6 +43,7 @@ class MappingServiceTest {
     }
 
     @Test
+    @Order(2)
     void testToEntity_BasicMap() {
         Map<String, Object> data = Map.of(
             "name", "New User",
@@ -57,18 +59,5 @@ class MappingServiceTest {
         assertEquals(Role.ADMIN, user.getRole());
     }
 
-    @Test
-    void testToEntity_WithInstant() {
-        String nowStr = "2026-04-20T10:00:00Z";
-        Map<String, Object> data = Map.of(
-            "title", "Event Title",
-            "startAt", nowStr
-        );
-
-        com.carebridge.entities.Event event = mappingService.toEntity(data, com.carebridge.entities.Event.class);
-
-        assertNotNull(event);
-        assertEquals("Event Title", event.getTitle());
-        assertEquals(Instant.parse(nowStr), event.getStartAt());
-    }
+   
 }

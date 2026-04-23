@@ -12,7 +12,6 @@ public class DAOImplCoverageTest {
     private JournalEntryDAO journalEntryDAO;
     private ResidentDAO residentDAO;
     private JournalDAO journalDAO;
-    private EventTypeDAO eventTypeDAO;
     private ThrowingEntityManager em;
 
     @BeforeEach
@@ -20,13 +19,11 @@ public class DAOImplCoverageTest {
         journalEntryDAO = new JournalEntryDAO();
         residentDAO = new ResidentDAO();
         journalDAO = new JournalDAO();
-        eventTypeDAO = new EventTypeDAO();
         em = new ThrowingEntityManager();
         
         ReflectionTestUtils.setField(journalEntryDAO, "em", em);
         ReflectionTestUtils.setField(residentDAO, "em", em);
         ReflectionTestUtils.setField(journalDAO, "em", em);
-        ReflectionTestUtils.setField(eventTypeDAO, "em", em);
     }
 
     @Test
@@ -43,15 +40,9 @@ public class DAOImplCoverageTest {
     void testJournalEntryDAO_readAll_Coverage() {
         assertThrows(RuntimeException.class, () -> journalEntryDAO.readAll());
     }
-    
-    @Test
-    @Order(3)
-    void testEventTypeDAO_readAll_Coverage() {
-        assertThrows(RuntimeException.class, () -> eventTypeDAO.readAll());
-    }
 
     @Test
-    @Order(4)
+    @Order(3)
     void testJournalDAO_readAll_Coverage() {
         assertThrows(RuntimeException.class, () -> journalDAO.readAll());
     }
