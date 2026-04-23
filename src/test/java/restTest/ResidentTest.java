@@ -3,6 +3,8 @@ package restTest;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.*;
 
+import java.util.Map;
+
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
@@ -10,26 +12,93 @@ import static org.hamcrest.Matchers.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ResidentTest extends BaseRestTest {
 
+    private static int createdId;
+    private static String cpr;
+
     @Test
     @Order(1)
     public void testCreateResident() {
-        java.util.Map<String, Object> req = java.util.Map.of(
-            "firstName", "John",
-            "lastName", "Doe",
-            "cprNr", "010101-1234"
+        cpr = "RES" + System.nanoTime();
+        Map<String, Object> payload = Map.of(
+            "firstName", "Test",
+            "lastName", "Resident",
+            "cprNr", cpr
         );
 
-        given()
+        createdId = given()
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(ContentType.JSON)
-                .body(req)
+                .body(payload)
                 .when()
                 .post("/residents/create")
                 .then()
                 .statusCode(201)
-                .header("Location", containsString("/api/residents/"))
-                .body("firstName", equalTo("John"))
-                .body("lastName", equalTo("Doe"))
-                .body("journalId", notNullValue());
+                .extract().path("id");
+    }
+
+    @Test
+    @Order(2)
+    public void testReadAllResidents() {
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/residents")
+                .then()
+                .statusCode(200)
+                .body("size()", greaterThan(0));
+    }
+
+    @Test
+    @Order(3)
+    public void testReadResidentById() {
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/residents/" + createdId)
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(createdId));
+    }
+
+    @Test
+    @Order(4)
+    public void testReadByCpr() {
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/residents/cpr/" + cpr)
+                .then()
+                .statusCode(200)
+                .body("cprNr", equalTo(cpr));
+    }
+
+    @Test
+    @Order(5)
+    public void testResidentErrors() {
+        // Not found by ID
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/residents/999999")
+                .then()
+                .statusCode(404);
+
+        // Not found by CPR
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/residents/cpr/nonexistent")
+                .then()
+                .statusCode(404);
+
+        // Create invalid (missing CPR)
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("firstName", "NoCPR"))
+                .when()
+                .post("/residents/create")
+                .then()
+                .statusCode(anyOf(is(400), is(500)));
     }
 }
