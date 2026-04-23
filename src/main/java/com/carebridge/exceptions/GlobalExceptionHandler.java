@@ -14,19 +14,22 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({EntityNotFoundException.class, JpaObjectRetrievalFailureException.class})
     public ResponseEntity<?> handleNotFound(Exception ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+        String msg = ex.getMessage() != null ? ex.getMessage() : "Not found";
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", msg));
     }
 
     @ExceptionHandler(ApiRuntimeException.class)
     public ResponseEntity<?> handleApiRuntime(ApiRuntimeException ex) {
-        return ResponseEntity.status(ex.getStatusCode()).body(Map.of("error", ex.getMessage()));
+        String msg = ex.getMessage() != null ? ex.getMessage() : "API Error";
+        return ResponseEntity.status(ex.getStatusCode()).body(Map.of("error", msg));
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleRuntime(RuntimeException ex) {
-        if (ex.getMessage() != null && (ex.getMessage().contains("not found") || ex.getMessage().contains("Resource not found"))) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+        String msg = ex.getMessage() != null ? ex.getMessage() : "Internal Server Error";
+        if (msg.toLowerCase().contains("not found") || msg.toLowerCase().contains("resource not found")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", msg));
         }
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", msg));
     }
 }

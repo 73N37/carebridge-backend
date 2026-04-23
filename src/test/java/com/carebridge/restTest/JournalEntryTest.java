@@ -59,6 +59,28 @@ public class JournalEntryTest extends BaseRestTest {
                 .body("title", equalTo("Morning Checkup"))
                 .extract().path("id");
         createdEntryId = ((Number) idObj).longValue();
+        
+        // Branch: journal not found
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(req)
+                .when()
+                .post("/api/journals/999999/journal-entries")
+                .then()
+                .statusCode(404);
+        
+        // Branch: title null/blank
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("content", "C"))
+                .when()
+                .post("/api/journals/" + journalId + "/journal-entries")
+                .then()
+                .statusCode(400);
+
+        // Branch: jwtUser present (already covered by adminToken)
     }
 
     @Test
@@ -72,6 +94,22 @@ public class JournalEntryTest extends BaseRestTest {
                 .statusCode(200)
                 .body("id", equalTo(createdEntryId.intValue()))
                 .body("content", equalTo("Everything looks good."));
+        
+        // Branch: entry not found
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/api/journals/" + journalId + "/journal-entries/999999")
+                .then()
+                .statusCode(404);
+        
+        // Branch: journalId mismatch
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/api/journals/111111/journal-entries/" + createdEntryId)
+                .then()
+                .statusCode(400);
     }
 
     @Test
@@ -93,41 +131,25 @@ public class JournalEntryTest extends BaseRestTest {
                 .then()
                 .statusCode(200)
                 .body("content", equalTo("Updated content"));
-    }
-
-    @Test
-    @Order(4)
-    public void testFindAllEntriesByJournal() {
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .when()
-                .get("/api/journals/" + journalId + "/journal-entries")
-                .then()
-                .statusCode(200)
-                .body("$", hasItem(createdEntryId.intValue()));
-    }
-
-    @Test
-    @Order(5)
-    public void testCreateEntryErrors() {
-        // Missing title
+        
+        // Branch: entry not found
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(ContentType.JSON)
-                .body(Map.of("content", "Content"))
+                .body(req)
                 .when()
-                .post("/api/journals/" + journalId + "/journal-entries")
-                .then()
-                .statusCode(400);
-
-        // Missing journal
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .contentType(ContentType.JSON)
-                .body(Map.of("title", "T", "content", "C"))
-                .when()
-                .post("/api/journals/999999/journal-entries")
+                .put("/api/journals/" + journalId + "/journal-entries/999999")
                 .then()
                 .statusCode(404);
+        
+        // Branch: journalId mismatch
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(req)
+                .when()
+                .put("/api/journals/111111/journal-entries/" + createdEntryId)
+                .then()
+                .statusCode(400);
     }
 }

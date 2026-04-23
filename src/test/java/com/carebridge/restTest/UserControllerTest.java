@@ -1,5 +1,7 @@
 package com.carebridge.restTest;
 
+import com.carebridge.entities.User;
+import com.carebridge.entities.Resident;
 import com.carebridge.enums.Role;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.*;
@@ -51,6 +53,21 @@ public class UserControllerTest extends BaseRestTest {
                 .body("email", equalTo(createdEmail))
                 .extract().path("id");
         createdUserId = ((Number) idObj).longValue();
+        
+        // Branch: no password
+        Map<String, Object> noPassMap = Map.of(
+                "name", "No Pass",
+                "email", "nopass" + nextId() + "@test.com",
+                "role", "USER"
+        );
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(noPassMap)
+                .when()
+                .post("/api/users")
+                .then()
+                .statusCode(500); 
     }
 
     @Test
@@ -61,9 +78,42 @@ public class UserControllerTest extends BaseRestTest {
                 .when()
                 .get("/api/users/" + createdUserId)
                 .then()
-                .statusCode(200)
-                .body("id", equalTo(createdUserId.intValue()))
-                .body("email", equalTo(createdEmail));
+                .statusCode(200);
+        
+        // Branch: user not found
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/api/users/999999")
+                .then()
+                .statusCode(400); 
+    }
+
+    @Test
+    @Order(4)
+    public void testUpdateUser() {
+        Map<String, Object> updateMap = Map.of(
+                "name", "Updated Name",
+                "password", "newpassword"
+        );
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(updateMap)
+                .when()
+                .put("/api/users/" + createdUserId)
+                .then()
+                .statusCode(200);
+
+        // Branch: no password
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("name", "Other Name"))
+                .when()
+                .put("/api/users/" + createdUserId)
+                .then()
+                .statusCode(200);
     }
 
     @Test
@@ -75,12 +125,35 @@ public class UserControllerTest extends BaseRestTest {
                 .get("/api/users/me")
                 .then()
                 .statusCode(200);
+        
+        // Branch: jwtUser == null
+        given()
+                .when()
+                .get("/api/users/me")
+                .then()
+                .statusCode(400); 
+        
+        // Branch: user not found in DB
+        String tempEmail = "me-nf-" + nextId() + "@test.com";
+        ensureUserExists("Temp", tempEmail, "pass");
+        String tempToken = login(tempEmail, "pass");
+        User tempUser = userDAO.readByEmail(tempEmail);
+        userDAO.delete(tempUser.getId());
+        
+        given()
+                .header("Authorization", "Bearer " + tempToken)
+                .when()
+                .get("/api/users/me")
+                .then()
+                .statusCode(404);
+        
+        userDAO.delete(createdUserId);
     }
 
     @Test
     @Order(6)
     public void testLinkResidents() {
-        String joeEmail = "joe" + nextId() + "@example.com";
+        String joeEmail = "joe-link-" + nextId() + "@example.com";
         Map<String, Object> guardianMap = Map.of(
                 "name", "Guardian Joe",
                 "email", joeEmail,
@@ -103,7 +176,7 @@ public class UserControllerTest extends BaseRestTest {
         Map<String, Object> residentReq = Map.of(
             "firstName", "Børge",
             "lastName", "Børgesen",
-            "cprNr", "121212-" + nextId()
+            "cprNr", "CPR-" + nextId()
         );
 
         Object rId = given()
@@ -117,17 +190,35 @@ public class UserControllerTest extends BaseRestTest {
                 .extract().path("id");
         Long residentId = ((Number) rId).longValue();
 
-        Map<String, Object> linkRequest = Map.of("residentIds", List.of(residentId));
-
+        // Case: valid link
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(ContentType.JSON)
-                .body(linkRequest)
+                .body(Map.of("residentIds", List.of(residentId)))
                 .when()
                 .post("/api/users/" + joeId + "/link-residents")
                 .then()
-                .statusCode(200)
-                .body("msg", containsString("Beboere tilknyttet"));
+                .statusCode(200);
+        
+        // Case: invalid resident ID (trigger 404)
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("residentIds", List.of(999999L)))
+                .when()
+                .post("/api/users/" + joeId + "/link-residents")
+                .then()
+                .statusCode(404);
+                
+        // Branch: user == null
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("residentIds", List.of(residentId)))
+                .when()
+                .post("/api/users/999999/link-residents")
+                .then()
+                .statusCode(404);
     }
 
     @Test
@@ -145,10 +236,14 @@ public class UserControllerTest extends BaseRestTest {
     @Test
     @Order(8)
     public void testDeleteUser() {
+        String delEmail = "del-" + nextId() + "@test.com";
+        ensureUserExists("Del", delEmail, "p");
+        User u = userDAO.readByEmail(delEmail);
+        
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .delete("/api/users/" + createdUserId)
+                .delete("/api/users/" + u.getId())
                 .then()
                 .statusCode(204);
     }

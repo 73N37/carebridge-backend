@@ -40,6 +40,16 @@ public class SecurityControllerTest extends BaseRestTest {
                 .statusCode(200)
                 .body("token", notNullValue())
                 .body("email", equalTo("admin@carebridge.io"));
+        
+        // Exception branch: invalid body (trigger catch Exception)
+        // RestAssured post with string not JSON to bypass automatic mapping if needed
+        given()
+                .contentType(ContentType.JSON)
+                .body("{ \"email\": null }") 
+                .when()
+                .post("/api/auth/login")
+                .then()
+                .statusCode(anyOf(is(401), is(500)));
     }
 
     @Test
@@ -64,6 +74,22 @@ public class SecurityControllerTest extends BaseRestTest {
                 .statusCode(201)
                 .body("token", notNullValue())
                 .body("email", equalTo(email));
+        
+        // Case: default role branch
+        String email2 = "user" + nextId() + "@carebridge.io";
+        Map<String, Object> regReq2 = Map.of(
+            "name", "User",
+            "email", email2,
+            "password", "p"
+        );
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(regReq2)
+                .when()
+                .post("/api/auth/register")
+                .then()
+                .statusCode(201);
     }
 
     @Test
@@ -76,7 +102,7 @@ public class SecurityControllerTest extends BaseRestTest {
                 .when()
                 .post("/api/auth/login")
                 .then()
-                .statusCode(anyOf(is(401), is(500)));
+                .statusCode(401);
 
         // Non-existent user
         given()
@@ -85,13 +111,13 @@ public class SecurityControllerTest extends BaseRestTest {
                 .when()
                 .post("/api/auth/login")
                 .then()
-                .statusCode(anyOf(is(401), is(500)));
+                .statusCode(401);
     }
 
     @Test
     @Order(5)
     public void testRegisterErrors() {
-        // Missing fields
+        // Exception branch (triggering badRequest msg: e.getMessage())
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(ContentType.JSON)
@@ -99,6 +125,6 @@ public class SecurityControllerTest extends BaseRestTest {
                 .when()
                 .post("/api/auth/register")
                 .then()
-                .statusCode(anyOf(is(400), is(500)));
+                .statusCode(400);
     }
 }

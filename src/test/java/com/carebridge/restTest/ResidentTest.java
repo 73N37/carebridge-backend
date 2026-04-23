@@ -34,6 +34,15 @@ public class ResidentTest extends BaseRestTest {
                 .then()
                 .statusCode(201)
                 .extract().path("id");
+        
+        // Branch: no jwtUser
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("firstName", "Non", "lastName", "Auth", "cprNr", "NOAUTH" + nextId()))
+                .when()
+                .post("/api/residents/create")
+                .then()
+                .statusCode(201);
     }
 
     @Test
@@ -58,6 +67,14 @@ public class ResidentTest extends BaseRestTest {
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(createdId));
+        
+        // Branch: not found (trigger catch)
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/api/residents/999999")
+                .then()
+                .statusCode(404);
     }
 
     @Test
@@ -70,35 +87,37 @@ public class ResidentTest extends BaseRestTest {
                 .then()
                 .statusCode(200)
                 .body("cprNr", equalTo(cpr));
+        
+        // Branch: not found
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/api/residents/cpr/NOTFOUND")
+                .then()
+                .statusCode(404);
     }
 
     @Test
     @Order(5)
     public void testResidentErrors() {
-        // Not found by ID
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .when()
-                .get("/api/residents/999999")
-                .then()
-                .statusCode(404);
-
-        // Not found by CPR
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .when()
-                .get("/api/residents/cpr/nonexistent")
-                .then()
-                .statusCode(404);
-
-        // Create invalid (missing CPR)
+        // Branch: firstName blank
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(ContentType.JSON)
-                .body(Map.of("firstName", "NoCPR"))
+                .body(Map.of("lastName", "L", "cprNr", "C"))
                 .when()
                 .post("/api/residents/create")
                 .then()
-                .statusCode(anyOf(is(400), is(500)));
+                .statusCode(400);
+
+        // Branch: lastName blank
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("firstName", "F", "cprNr", "C"))
+                .when()
+                .post("/api/residents/create")
+                .then()
+                .statusCode(400);
     }
 }

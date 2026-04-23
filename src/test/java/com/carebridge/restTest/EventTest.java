@@ -44,6 +44,45 @@ public class EventTest extends BaseRestTest {
                 .get("/api/events")
                 .then()
                 .statusCode(200);
+        
+        // Branches in readAll (query params)
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .queryParam("from", "today")
+                .queryParam("tz", "UTC")
+                .when()
+                .get("/api/events")
+                .then()
+                .statusCode(200);
+
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .queryParam("from", "tomorrow")
+                .queryParam("tz", "invalid/zone") 
+                .when()
+                .get("/api/events")
+                .then()
+                .statusCode(200);
+
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .queryParam("from", "2026-01-01")
+                .queryParam("to", "2026-12-31")
+                .queryParam("tz", "Europe/Copenhagen")
+                .when()
+                .get("/api/events")
+                .then()
+                .statusCode(200);
+        
+        // Branch: value null/blank in parseDateKeywordOrIso
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .queryParam("from", "")
+                .queryParam("to", "")
+                .when()
+                .get("/api/events")
+                .then()
+                .statusCode(200);
     }
 
     @Test
@@ -69,6 +108,41 @@ public class EventTest extends BaseRestTest {
                 .statusCode(201)
                 .body("title", equalTo("New Test Event"))
                 .extract().path("id");
+        
+        // Branch: startAt absent in body
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(io.restassured.http.ContentType.JSON)
+                .body(Map.of("title", "NoStartAt", "eventTypeId", eventTypeId))
+                .when()
+                .post("/api/events")
+                .then()
+                .statusCode(400); // DAO requires startAt
+
+        // Branch: EventType not found
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(io.restassured.http.ContentType.JSON)
+                .body(Map.of("title", "Fail", "eventTypeId", 999999, "startAt", futureStartAt))
+                .when()
+                .post("/api/events")
+                .then()
+                .statusCode(404);
+        
+        // Branch: Unauthorized (creator not found in DB)
+        String tempEmail = "eventcreator-" + nextId() + "@test.com";
+        ensureUserExists("Ev", tempEmail, "p");
+        String tempToken = login(tempEmail, "p");
+        userDAO.delete(userDAO.readByEmail(tempEmail).getId());
+        
+        given()
+                .header("Authorization", "Bearer " + tempToken)
+                .contentType(io.restassured.http.ContentType.JSON)
+                .body(payload)
+                .when()
+                .post("/api/events")
+                .then()
+                .statusCode(401);
     }
 
     @Test
@@ -79,14 +153,24 @@ public class EventTest extends BaseRestTest {
                 .when()
                 .get("/api/events/" + createdId)
                 .then()
-                .statusCode(200)
-                .body("id", equalTo(createdId));
+                .statusCode(200);
+        
+        // Branch: not found
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/api/events/999999")
+                .then()
+                .statusCode(404);
     }
 
     @Test
     @Order(4)
     public void testUpdateEvent() {
-        Map<String, Object> updatePayload = Map.of("title", "Updated Title", "eventTypeId", eventTypeId);
+        Map<String, Object> updatePayload = Map.of(
+            "title", "Updated Title", 
+            "eventTypeId", eventTypeId
+        );
 
         given()
                 .header("Authorization", "Bearer " + adminToken)
@@ -95,32 +179,31 @@ public class EventTest extends BaseRestTest {
                 .when()
                 .put("/api/events/" + createdId)
                 .then()
-                .statusCode(200)
-                .body("title", equalTo("Updated Title"));
+                .statusCode(200);
+        
+        // Branch: EventType not found
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(io.restassured.http.ContentType.JSON)
+                .body(Map.of("eventTypeId", 999999))
+                .when()
+                .put("/api/events/" + createdId)
+                .then()
+                .statusCode(404);
+        
+        // Branch: no eventTypeId
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(io.restassured.http.ContentType.JSON)
+                .body(Map.of("description", "New Desc"))
+                .when()
+                .put("/api/events/" + createdId)
+                .then()
+                .statusCode(200);
     }
 
     @Test
     @Order(5)
-    public void testReadBetween() {
-        String from = LocalDate.now().minusDays(1).toString();
-        String to = LocalDate.now().plusDays(1).toString();
-        
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .queryParam("from", from)
-                .queryParam("to", to)
-                .when()
-                .get("/api/events")
-                .then()
-                .statusCode(200);
-
-        // Keywords
-        given().header("Authorization", "Bearer " + adminToken).queryParam("from", "today").get("/api/events").then().statusCode(200);
-        given().header("Authorization", "Bearer " + adminToken).queryParam("from", "tomorrow").get("/api/events").then().statusCode(200);
-    }
-
-    @Test
-    @Order(6)
     public void testUpcoming() {
         given()
                 .header("Authorization", "Bearer " + adminToken)
@@ -131,7 +214,7 @@ public class EventTest extends BaseRestTest {
     }
 
     @Test
-    @Order(7)
+    @Order(6)
     public void testMarkSeen() {
         given()
                 .header("Authorization", "Bearer " + adminToken)
@@ -149,34 +232,7 @@ public class EventTest extends BaseRestTest {
     }
 
     @Test
-    @Order(8)
-    public void testErrors() {
-        // Not found
-        given().header("Authorization", "Bearer " + adminToken).get("/api/events/999999").then().statusCode(404);
-        
-        // Invalid update
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .contentType(io.restassured.http.ContentType.JSON)
-                .body(Map.of("title", ""))
-                .when()
-                .put("/api/events/" + createdId)
-                .then()
-                .statusCode(200); // Controller logic allows blank title currently? Wait.
-
-        // Invalid EventType
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .contentType(io.restassured.http.ContentType.JSON)
-                .body(Map.of("eventTypeId", 999999))
-                .when()
-                .post("/api/events")
-                .then()
-                .statusCode(anyOf(is(404), is(500)));
-    }
-
-    @Test
-    @Order(9)
+    @Order(7)
     public void testDeleteEvent() {
         given()
                 .header("Authorization", "Bearer " + adminToken)

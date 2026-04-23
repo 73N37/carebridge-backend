@@ -40,7 +40,7 @@ public class UserController {
     public ResponseEntity<User> read(@PathVariable Long id) {
         User user = userDAO.read(id);
         if (user == null) {
-            return ResponseEntity.notFound().build();
+            throw new ApiRuntimeException(400, "User cannot be null");
         }
         return ResponseEntity.ok(user);
     }
@@ -55,7 +55,7 @@ public class UserController {
     @DynamicDTO
     public ResponseEntity<User> create(@RequestBody Map<String, Object> body) {
         User user = mappingService.toEntity(body, User.class);
-        if (body.containsKey("password")) {
+        if (body.get("password") != null) {
             user.setPassword((String) body.get("password"));
         }
         User created = userDAO.create(user);
@@ -66,7 +66,7 @@ public class UserController {
     @DynamicDTO
     public ResponseEntity<User> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         User user = mappingService.toEntity(body, User.class);
-        if (body.containsKey("password")) {
+        if (body.get("password") != null) {
             user.setPassword((String) body.get("password"));
         }
         User updated = userDAO.update(id, user);
@@ -83,12 +83,12 @@ public class UserController {
     @DynamicDTO
     public ResponseEntity<User> me(@RequestAttribute(value = "user", required = false) Map<String, Object> jwtUser) {
         if (jwtUser == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new ApiRuntimeException(400, "JWT user cannot be null");
         }
         String email = (String) jwtUser.get("username");
         User user = userDAO.readByEmail(email);
         if (user == null) {
-            return ResponseEntity.notFound().build();
+            throw new ApiRuntimeException(404, "User not found");
         }
         return ResponseEntity.ok(user);
     }
@@ -104,7 +104,7 @@ public class UserController {
         List<Number> residentIds = (List<Number>) body.get("residentIds");
         User user = userDAO.read(id);
         if (user == null) {
-            throw new ApiRuntimeException(404, "Bruger ikke fundet");
+            throw new ApiRuntimeException(404, "User not found");
         }
 
         List<Resident> residentsToLink = new ArrayList<>();

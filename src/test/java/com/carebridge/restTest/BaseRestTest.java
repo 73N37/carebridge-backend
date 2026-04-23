@@ -2,6 +2,7 @@ package com.carebridge.restTest;
 
 import com.carebridge.CareBridgeApplication;
 import com.carebridge.config.Populator;
+import com.carebridge.dao.impl.UserDAO;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
@@ -22,6 +23,9 @@ public abstract class BaseRestTest {
 
     @Autowired
     protected Populator populator;
+
+    @Autowired
+    protected UserDAO userDAO;
 
     protected String adminToken;
     protected String userToken;
@@ -47,7 +51,7 @@ public abstract class BaseRestTest {
         userToken = login(aliceEmail, "password123");
     }
 
-    private String login(String email, String password) {
+    protected String login(String email, String password) {
         return given()
                 .contentType("application/json")
                 .body(java.util.Map.of("email", email, "password", password))
@@ -57,7 +61,7 @@ public abstract class BaseRestTest {
                 .extract().path("token");
     }
 
-    private void ensureUserExists(String name, String email, String password) {
+    protected void ensureUserExists(String name, String email, String password) {
         // Try to login first, if fails, register
         int status = given()
                 .contentType("application/json")

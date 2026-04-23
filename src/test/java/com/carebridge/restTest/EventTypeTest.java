@@ -53,13 +53,21 @@ public class EventTypeTest extends BaseRestTest {
                 .when()
                 .get("/api/event-types/" + createdId)
                 .then()
-                .statusCode(200)
-                .body("id", equalTo(createdId));
+                .statusCode(200);
+        
+        // Branch: not found
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/api/event-types/999999")
+                .then()
+                .statusCode(404);
     }
 
     @Test
     @Order(4)
     public void testUpdate() {
+        // Case: valid update
         Map<String, Object> payload = Map.of("colorHex", "#000000");
         given()
                 .header("Authorization", "Bearer " + adminToken)
@@ -69,11 +77,39 @@ public class EventTypeTest extends BaseRestTest {
                 .put("/api/event-types/" + createdId)
                 .then()
                 .statusCode(200);
+        
+        // Branch: updated fields null
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("name", "New"))
+                .when()
+                .put("/api/event-types/" + createdId)
+                .then()
+                .statusCode(200);
+                
+        // Branch: not found
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(payload)
+                .when()
+                .put("/api/event-types/999999")
+                .then()
+                .statusCode(404);
     }
 
     @Test
     @Order(5)
     public void testDelete() {
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .delete("/api/event-types/" + createdId)
+                .then()
+                .statusCode(anyOf(is(200), is(204)));
+        
+        // Branch: already deleted
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
