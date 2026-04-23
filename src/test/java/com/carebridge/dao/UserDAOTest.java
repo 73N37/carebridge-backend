@@ -52,6 +52,7 @@ public class UserDAOTest {
     void testReadByEmail() {
         User read = userDAO.readByEmail(email);
         assertNotNull(read);
+        assertNull(userDAO.readByEmail("none@test.com"));
     }
 
     @Test
@@ -66,8 +67,15 @@ public class UserDAOTest {
     void testUpdateUser() {
         User patch = new User();
         patch.setName("New Name");
+        patch.setEmail("new" + System.nanoTime() + "@test.com");
+        patch.setRole(Role.ADMIN);
         User updated = userDAO.update(createdId, patch);
         assertEquals("New Name", updated.getName());
+        assertEquals(Role.ADMIN, updated.getRole());
+
+        User patch2 = new User();
+        patch2.setName("");
+        userDAO.update(createdId, patch2);
     }
 
     @Test
@@ -76,6 +84,10 @@ public class UserDAOTest {
         assertNull(userDAO.read(999999L));
         assertThrows(ApiRuntimeException.class, () -> userDAO.readByEmail(""));
         assertThrows(Exception.class, () -> userDAO.create(null));
+        
+        User e1 = new User();
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(e1)); // Missing fields
+        
         assertThrows(ApiRuntimeException.class, () -> userDAO.update(999999L, new User()));
         assertThrows(ApiRuntimeException.class, () -> userDAO.delete(999999L));
     }

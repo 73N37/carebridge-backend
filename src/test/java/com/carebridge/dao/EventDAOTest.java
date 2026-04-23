@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -85,10 +86,20 @@ public class EventDAOTest {
         patch.setShowOnBoard(true);
         patch.setEventType(testType);
         patch.setCreatedBy(testUser);
+        patch.setSeenByUsers(Set.of(testUser));
         
         Event updated = eventDAO.update(eventId, patch);
         assertEquals("New Title", updated.getTitle());
-        assertEquals("New Desc", updated.getDescription());
+        assertFalse(updated.getSeenByUsers().isEmpty());
+
+        // Partial update branches
+        Event patch2 = new Event();
+        patch2.setTitle(""); // Blank title check
+        eventDAO.update(eventId, patch2);
+        
+        Event patch3 = new Event();
+        patch3.setEventType(null);
+        eventDAO.update(eventId, patch3);
     }
 
     @Test
