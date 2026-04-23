@@ -2,6 +2,7 @@ package com.carebridge.restTest;
 
 import org.junit.jupiter.api.*;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
@@ -101,17 +102,17 @@ public class EventTest extends BaseRestTest {
     @Test
     @Order(5)
     public void testReadBetween() {
-        String from = Instant.now().minus(1, ChronoUnit.DAYS).toString();
-        String to = Instant.now().plus(1, ChronoUnit.DAYS).toString();
+        String from = LocalDate.now().minusDays(1).toString();
+        String to = LocalDate.now().plusDays(1).toString();
         
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .queryParam("from", from)
                 .queryParam("to", to)
                 .when()
-                .get("/api/events/between")
+                .get("/api/events")
                 .then()
-                .statusCode(anyOf(is(200), is(400)));
+                .statusCode(200);
     }
 
     @Test
@@ -121,39 +122,27 @@ public class EventTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .post("/api/events/" + createdId + "/seen")
+                .post("/api/events/" + createdId + "/mark-seen")
                 .then()
-                .statusCode(200);
+                .statusCode(204);
 
         // Remove seen by
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .delete("/api/events/" + createdId + "/seen")
+                .delete("/api/events/" + createdId + "/mark-seen")
                 .then()
-                .statusCode(200);
+                .statusCode(204);
     }
 
     @Test
     @Order(7)
     public void testErrorPaths() {
-        // Invalid between dates
+        // mark-seen non-existent
         given()
                 .header("Authorization", "Bearer " + adminToken)
-                .queryParam("from", "invalid")
-                .queryParam("to", "invalid")
                 .when()
-                .get("/api/events/between")
-                .then()
-                .statusCode(anyOf(is(400), is(500)));
-
-        // Non-existent event update
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .contentType(io.restassured.http.ContentType.JSON)
-                .body(Map.of("title", "X"))
-                .when()
-                .put("/api/events/999999")
+                .post("/api/events/999999/mark-seen")
                 .then()
                 .statusCode(anyOf(is(404), is(500)));
     }

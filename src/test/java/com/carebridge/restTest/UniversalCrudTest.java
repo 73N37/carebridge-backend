@@ -122,6 +122,6 @@ public class UniversalCrudTest extends BaseRestTest {
                 .when()
                 .get("/api/v3/invalid-resource")
                 .then()
-                .statusCode(500); // Throws RuntimeException in UniversalCrudController
+                .statusCode(404);
     }
 }

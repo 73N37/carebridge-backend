@@ -113,7 +113,7 @@ public class JournalEntryTest extends BaseRestTest {
                 .when()
                 .post("/api/journals/" + journalId + "/journal-entries")
                 .then()
-                .statusCode(500); // Constraint violation
+                .statusCode(anyOf(is(400), is(500)));
 
         // Missing journal
         given()

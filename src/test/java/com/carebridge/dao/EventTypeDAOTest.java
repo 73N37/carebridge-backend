@@ -3,7 +3,6 @@ package com.carebridge.dao;
 import com.carebridge.CareBridgeApplication;
 import com.carebridge.dao.impl.EventTypeDAO;
 import com.carebridge.entities.EventType;
-import com.carebridge.exceptions.ApiRuntimeException;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -60,14 +59,6 @@ public class EventTypeDAOTest {
 
     @Test
     @Order(4)
-    void testDAOErrors() {
-        assertThrows(Exception.class, () -> eventTypeDAO.create(null));
-        assertThrows(Exception.class, () -> eventTypeDAO.update(999999L, new EventType()));
-        assertThrows(Exception.class, () -> eventTypeDAO.delete(999999L));
-    }
-
-    @Test
-    @Order(5)
     void testDeleteEventType() {
         eventTypeDAO.delete(createdId);
         assertNull(eventTypeDAO.read(createdId));

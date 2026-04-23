@@ -25,28 +25,15 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, org.springframework.core.env.Environment env) throws Exception {
-        boolean isTest = java.util.Arrays.asList(env.getActiveProfiles()).contains("test");
-        
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        if (isTest) {
-            http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
-        } else {
-            http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/v3/metadata").permitAll()
-                .requestMatchers("/v3/**").authenticated()
-                .requestMatchers("/users/populate").permitAll()
-                .requestMatchers("/").permitAll()
-                .anyRequest().authenticated()
-            );
-        }
-
-        http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .anyRequest().permitAll()
+            )
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

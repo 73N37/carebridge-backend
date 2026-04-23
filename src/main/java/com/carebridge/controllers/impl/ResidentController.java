@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -28,6 +29,31 @@ public class ResidentController {
         this.residentDAO = residentDAO;
         this.userDAO = userDAO;
         this.mappingService = mappingService;
+    }
+
+    @GetMapping
+    @DynamicDTO
+    public List<Resident> getAll() {
+        return residentDAO.readAll();
+    }
+
+    @GetMapping("/{id}")
+    @DynamicDTO
+    public ResponseEntity<Resident> getById(@PathVariable Long id) {
+        try {
+            Resident r = residentDAO.read(id);
+            return ResponseEntity.ok(r);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/cpr/{cpr}")
+    @DynamicDTO
+    public ResponseEntity<Resident> getByCpr(@PathVariable String cpr) {
+        Resident r = residentDAO.readByCpr(cpr);
+        if (r == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(r);
     }
 
     @PostMapping("/create")
