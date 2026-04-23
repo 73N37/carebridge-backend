@@ -58,6 +58,20 @@ public class JournalEntry extends BaseEntity {
         this.editCloseTime = this.createdAt.plusHours(24);
     }
 
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+        if (this.editCloseTime == null) {
+            this.editCloseTime = this.createdAt.plusHours(24);
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
     // --- Getters & Setters ---
 
     public User getAuthor() { return author; }

@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -30,6 +31,28 @@ public class ResidentController {
         this.mappingService = mappingService;
     }
 
+    @GetMapping
+    @DynamicDTO
+    public List<Resident> getAll() {
+        return residentDAO.readAll();
+    }
+
+    @GetMapping("/{id}")
+    @DynamicDTO
+    public ResponseEntity<Resident> getById(@PathVariable Long id) {
+        Resident r = residentDAO.read(id);
+        if (r == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(r);
+    }
+
+    @GetMapping("/cpr/{cpr}")
+    @DynamicDTO
+    public ResponseEntity<Resident> getByCpr(@PathVariable String cpr) {
+        Resident r = residentDAO.readByCpr(cpr);
+        if (r == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(r);
+    }
+
     @PostMapping("/create")
     @DynamicDTO
     public ResponseEntity<Resident> create(
@@ -40,10 +63,10 @@ public class ResidentController {
             Resident resident = mappingService.toEntity(body, Resident.class);
 
             if (resident.getFirstName() == null || resident.getFirstName().isBlank()) {
-                throw new IllegalArgumentException("firstName is required");
+                return ResponseEntity.badRequest().build();
             }
             if (resident.getLastName() == null || resident.getLastName().isBlank()) {
-                throw new IllegalArgumentException("lastName is required");
+                return ResponseEntity.badRequest().build();
             }
 
             Journal journal = new Journal();
@@ -63,8 +86,8 @@ public class ResidentController {
                     .header("Location", "/api/residents/" + created.getId())
                     .body(created);
 
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }

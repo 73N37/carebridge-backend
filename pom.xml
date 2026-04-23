@@ -45,6 +45,7 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
+            <version>42.7.10</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -116,6 +117,18 @@
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
+                        <configuration>
+                            <includes>
+                                <include>com/carebridge/**</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/*$HibernateProxy*</exclude>
+                                <exclude>**/*$HibernateInterceptor*</exclude>
+                                <exclude>**/*$HibernateInstantiator*</exclude>
+                                <exclude>**/*$JaxbAccessor*</exclude>
+                                <exclude>**/config/**</exclude>
+                            </excludes>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>report</id>
@@ -123,6 +136,11 @@
                         <goals>
                             <goal>report</goal>
                         </goals>
+                        <configuration>
+                            <includes>
+                                <include>com/carebridge/**</include>
+                            </includes>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

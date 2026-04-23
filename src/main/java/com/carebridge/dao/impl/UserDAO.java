@@ -73,13 +73,12 @@ public class UserDAO implements IDAO<User, Long> {
     @Transactional
     public User create(User u) {
         if (u == null) throw new ApiRuntimeException(400, "User cannot be null");
-        if (u.getEmail() == null || u.getEmail().isBlank())
+        if (u.getEmail() == null || u.getEmail().isBlank()){
             throw new ApiRuntimeException(400, "Email is required");
-        if (u.getName() == null || u.getName().isBlank())
+        }
+        if (u.getName() == null || u.getName().isBlank()){
             throw new ApiRuntimeException(400, "Name is required");
-
-        if (u.getRole() == null)
-            u.setRole(Role.USER);
+        }
 
         boolean exists = !em.createQuery("SELECT u FROM User u WHERE u.email = :email", User.class)
                 .setParameter("email", u.getEmail())

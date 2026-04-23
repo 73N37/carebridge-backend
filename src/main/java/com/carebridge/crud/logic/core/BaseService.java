@@ -46,12 +46,11 @@ public class BaseService<T extends BaseEntity> {
 
     @Transactional
     public T save(T entity) {
-        if (entity.getId() == null) {
-            em.persist(entity);
-            return entity;
-        } else {
-            return em.merge(entity);
+        if (entity.getId() != null) {
+            throw new RuntimeException("Entity already has an ID. Use update instead.");
         }
+        em.persist(entity);
+        return entity;
     }
 
     @Transactional

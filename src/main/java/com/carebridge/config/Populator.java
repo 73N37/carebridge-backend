@@ -75,7 +75,7 @@ public class Populator {
         private final EntityManager em;
         public PopulatorManual(EntityManager em) { this.em = em; }
         public void populate() {
-             // Implementation logic here if really needed
+             // Redundant, using Spring-managed Populator component instead
         }
     }
 }

@@ -11,7 +11,7 @@ public class Journal extends BaseEntity {
 
     // 1 Journal → mange entries
     @OneToMany(mappedBy = "journal",fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    private List<JournalEntry> entries;
+    private List<JournalEntry> entries = new java.util.ArrayList<>();
 
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinColumn(name = "resident_id", referencedColumnName = "id")
