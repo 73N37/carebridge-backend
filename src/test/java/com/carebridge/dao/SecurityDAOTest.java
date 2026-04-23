@@ -1,4 +1,4 @@
-package dao;
+package com.carebridge.dao;
 
 import com.carebridge.CareBridgeApplication;
 import com.carebridge.dao.security.SecurityDAO;
@@ -22,32 +22,31 @@ public class SecurityDAOTest {
     @Autowired
     private SecurityDAO securityDAO;
 
-    private static String email;
+    private String email;
+    private Long createdId;
 
-    @Test
-    @Order(1)
-    void testCreateUser() {
+    @BeforeEach
+    void setUp() {
         email = "sec" + System.nanoTime() + "@test.com";
-        User user = securityDAO.createUser("Sec", email, "pass", "DN", "DE", "DP", "IE", "IP", Role.USER);
-        assertNotNull(user.getId());
+        User user = securityDAO.createUser("Sec", email, "pass", "DN", "DE@test.com", "DP", "IE@test.com", "IP", Role.USER);
+        createdId = user.getId();
     }
 
     @Test
-    @Order(2)
+    @Order(1)
     void testVerifyUser() throws ValidationException {
         User verified = securityDAO.getVerifiedUser(email, "pass");
         assertNotNull(verified);
         assertEquals(email, verified.getEmail());
 
         assertThrows(ValidationException.class, () -> securityDAO.getVerifiedUser(email, "wrong"));
-        assertThrows(ValidationException.class, () -> securityDAO.getVerifiedUser("none", "pass"));
+        assertThrows(ValidationException.class, () -> securityDAO.getVerifiedUser("none@test.com", "pass"));
     }
 
     @Test
-    @Order(3)
+    @Order(2)
     void testChangeRole() throws ValidationException {
-        User user = securityDAO.getVerifiedUser(email, "pass");
-        User updated = securityDAO.changeRole(user.getId(), Role.ADMIN);
+        User updated = securityDAO.changeRole(createdId, Role.ADMIN);
         assertEquals(Role.ADMIN, updated.getRole());
         
         assertNull(securityDAO.changeRole(999999L, Role.USER));

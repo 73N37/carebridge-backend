@@ -1,4 +1,4 @@
-package restTest;
+package com.carebridge.restTest;
 
 import com.carebridge.enums.Role;
 import io.restassured.http.ContentType;
@@ -23,7 +23,7 @@ public class UserControllerTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .get("/users")
+                .get("/api/users")
                 .then()
                 .statusCode(200)
                 .body("size()", greaterThan(0));
@@ -32,7 +32,7 @@ public class UserControllerTest extends BaseRestTest {
     @Test
     @Order(2)
     public void testCreateUser() {
-        createdEmail = "newuser" + System.nanoTime() + "@example.com";
+        createdEmail = "newuser" + nextId() + "@example.com";
         Map<String, Object> userMap = Map.of(
                 "name", "New User",
                 "email", createdEmail,
@@ -45,7 +45,7 @@ public class UserControllerTest extends BaseRestTest {
                 .contentType(ContentType.JSON)
                 .body(userMap)
                 .when()
-                .post("/users")
+                .post("/api/users")
                 .then()
                 .statusCode(201)
                 .body("email", equalTo(createdEmail))
@@ -59,7 +59,7 @@ public class UserControllerTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .get("/users/" + createdUserId)
+                .get("/api/users/" + createdUserId)
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(createdUserId.intValue()))
@@ -72,7 +72,7 @@ public class UserControllerTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + userToken)
                 .when()
-                .get("/users/me")
+                .get("/api/users/me")
                 .then()
                 .statusCode(200);
     }
@@ -80,7 +80,7 @@ public class UserControllerTest extends BaseRestTest {
     @Test
     @Order(6)
     public void testLinkResidents() {
-        String joeEmail = "joe" + System.nanoTime() + "@example.com";
+        String joeEmail = "joe" + nextId() + "@example.com";
         Map<String, Object> guardianMap = Map.of(
                 "name", "Guardian Joe",
                 "email", joeEmail,
@@ -93,7 +93,7 @@ public class UserControllerTest extends BaseRestTest {
                 .contentType(ContentType.JSON)
                 .body(guardianMap)
                 .when()
-                .post("/users")
+                .post("/api/users")
                 .then()
                 .statusCode(201)
                 .extract().path("id");
@@ -103,7 +103,7 @@ public class UserControllerTest extends BaseRestTest {
         Map<String, Object> residentReq = Map.of(
             "firstName", "Børge",
             "lastName", "Børgesen",
-            "cprNr", "121212-1212" + System.nanoTime()
+            "cprNr", "121212-" + nextId()
         );
 
         Object rId = given()
@@ -111,7 +111,7 @@ public class UserControllerTest extends BaseRestTest {
                 .contentType(ContentType.JSON)
                 .body(residentReq)
                 .when()
-                .post("/residents/create")
+                .post("/api/residents/create")
                 .then()
                 .statusCode(201)
                 .extract().path("id");
@@ -124,7 +124,7 @@ public class UserControllerTest extends BaseRestTest {
                 .contentType(ContentType.JSON)
                 .body(linkRequest)
                 .when()
-                .post("/users/" + joeId + "/link-residents")
+                .post("/api/users/" + joeId + "/link-residents")
                 .then()
                 .statusCode(200)
                 .body("msg", containsString("Beboere tilknyttet"));
@@ -136,7 +136,7 @@ public class UserControllerTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .post("/users/populate")
+                .post("/api/users/populate")
                 .then()
                 .statusCode(200)
                 .body("msg", containsString("Database populated"));
@@ -148,7 +148,7 @@ public class UserControllerTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .delete("/users/" + createdUserId)
+                .delete("/api/users/" + createdUserId)
                 .then()
                 .statusCode(204);
     }

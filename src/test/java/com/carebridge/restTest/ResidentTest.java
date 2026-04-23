@@ -1,4 +1,4 @@
-package restTest;
+package com.carebridge.restTest;
 
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.*;
@@ -18,7 +18,7 @@ public class ResidentTest extends BaseRestTest {
     @Test
     @Order(1)
     public void testCreateResident() {
-        cpr = "RES" + System.nanoTime();
+        cpr = "RES" + nextId();
         Map<String, Object> payload = Map.of(
             "firstName", "Test",
             "lastName", "Resident",
@@ -30,7 +30,7 @@ public class ResidentTest extends BaseRestTest {
                 .contentType(ContentType.JSON)
                 .body(payload)
                 .when()
-                .post("/residents/create")
+                .post("/api/residents/create")
                 .then()
                 .statusCode(201)
                 .extract().path("id");
@@ -42,7 +42,7 @@ public class ResidentTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .get("/residents")
+                .get("/api/residents")
                 .then()
                 .statusCode(200)
                 .body("size()", greaterThan(0));
@@ -54,7 +54,7 @@ public class ResidentTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .get("/residents/" + createdId)
+                .get("/api/residents/" + createdId)
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(createdId));
@@ -66,7 +66,7 @@ public class ResidentTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .get("/residents/cpr/" + cpr)
+                .get("/api/residents/cpr/" + cpr)
                 .then()
                 .statusCode(200)
                 .body("cprNr", equalTo(cpr));
@@ -79,7 +79,7 @@ public class ResidentTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .get("/residents/999999")
+                .get("/api/residents/999999")
                 .then()
                 .statusCode(404);
 
@@ -87,7 +87,7 @@ public class ResidentTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .get("/residents/cpr/nonexistent")
+                .get("/api/residents/cpr/nonexistent")
                 .then()
                 .statusCode(404);
 
@@ -97,7 +97,7 @@ public class ResidentTest extends BaseRestTest {
                 .contentType(ContentType.JSON)
                 .body(Map.of("firstName", "NoCPR"))
                 .when()
-                .post("/residents/create")
+                .post("/api/residents/create")
                 .then()
                 .statusCode(anyOf(is(400), is(500)));
     }

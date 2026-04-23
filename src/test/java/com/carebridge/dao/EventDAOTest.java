@@ -1,4 +1,4 @@
-package dao;
+package com.carebridge.dao;
 
 import com.carebridge.CareBridgeApplication;
 import com.carebridge.dao.impl.EventDAO;

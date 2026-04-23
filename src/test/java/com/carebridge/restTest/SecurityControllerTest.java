@@ -1,4 +1,4 @@
-package restTest;
+package com.carebridge.restTest;
 
 import com.carebridge.enums.Role;
 import io.restassured.http.ContentType;

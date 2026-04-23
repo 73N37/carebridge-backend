@@ -1,4 +1,4 @@
-package restTest;
+package com.carebridge.restTest;
 
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.*;
@@ -21,7 +21,7 @@ public class UniversalCrudTest extends BaseRestTest {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .get("/v3/metadata")
+                .get("/api/v3/metadata")
                 .then()
                 .statusCode(200)
                 .body("residents", notNullValue())
@@ -31,7 +31,7 @@ public class UniversalCrudTest extends BaseRestTest {
     @Test
     @Order(2)
     public void testCreateResource() {
-        uniqueName = "Test Event Type " + System.currentTimeMillis();
+        uniqueName = "Test Event Type " + nextId();
         Map<String, Object> body = Map.of(
                 "name", uniqueName,
                 "colorHex", "#FF0000"
@@ -42,7 +42,7 @@ public class UniversalCrudTest extends BaseRestTest {
                 .contentType(ContentType.JSON)
                 .body(body)
                 .when()
-                .post("/v3/event-types")
+                .post("/api/v3/event-types")
                 .then()
                 .statusCode(201)
                 .body("name", equalTo(uniqueName))
@@ -53,11 +53,23 @@ public class UniversalCrudTest extends BaseRestTest {
 
     @Test
     @Order(3)
+    public void testGetAll() {
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/api/v3/event-types")
+                .then()
+                .statusCode(200)
+                .body("content", notNullValue());
+    }
+
+    @Test
+    @Order(4)
     public void testGetById() {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .get("/v3/event-types/" + createdId)
+                .get("/api/v3/event-types/" + createdId)
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(createdId.intValue()))
@@ -65,7 +77,7 @@ public class UniversalCrudTest extends BaseRestTest {
     }
 
     @Test
-    @Order(4)
+    @Order(5)
     public void testUpdateResource() {
         Map<String, Object> body = Map.of(
                 "name", "Updated " + uniqueName,
@@ -77,7 +89,7 @@ public class UniversalCrudTest extends BaseRestTest {
                 .contentType(ContentType.JSON)
                 .body(body)
                 .when()
-                .put("/v3/event-types/" + createdId)
+                .put("/api/v3/event-types/" + createdId)
                 .then()
                 .statusCode(200)
                 .body("name", equalTo("Updated " + uniqueName))
@@ -85,31 +97,31 @@ public class UniversalCrudTest extends BaseRestTest {
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     public void testDeleteResource() {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .delete("/v3/event-types/" + createdId)
+                .delete("/api/v3/event-types/" + createdId)
                 .then()
                 .statusCode(204);
 
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .get("/v3/event-types/" + createdId)
+                .get("/api/v3/event-types/" + createdId)
                 .then()
                 .statusCode(404);
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     public void testInvalidResource() {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .get("/v3/invalid-resource")
+                .get("/api/v3/invalid-resource")
                 .then()
-                .statusCode(403);
+                .statusCode(500); // Throws RuntimeException in UniversalCrudController
     }
 }

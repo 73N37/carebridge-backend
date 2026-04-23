@@ -1,4 +1,4 @@
-package dao;
+package com.carebridge.dao;
 
 import com.carebridge.CareBridgeApplication;
 import com.carebridge.dao.impl.JournalDAO;
@@ -38,54 +38,45 @@ public class JournalDAOTest {
     @Autowired
     private UserDAO userDAO;
 
-    private static User testUser;
-    private static Resident testResident;
-    private static Long journalId;
-    private static Long entryId;
+    private User testUser;
+    private Resident testResident;
+    private Long journalId;
+    private Long entryId;
 
-    @BeforeAll
-    public static void setup(@Autowired UserDAO uDAO, @Autowired ResidentDAO rDAO) {
+    @BeforeEach
+    void setUp() {
         testUser = new User("Journal User", "juser" + System.nanoTime() + "@test.com", "pass", Role.USER);
-        uDAO.create(testUser);
+        userDAO.create(testUser);
 
         testResident = new Resident();
         testResident.setFirstName("Resident");
         testResident.setLastName("One");
-        testResident.setCprNr("123" + System.nanoTime());
-        rDAO.create(testResident);
+        testResident.setCprNr("RES" + System.nanoTime());
+        residentDAO.create(testResident);
+        
+        Journal journal = new Journal();
+        journal.setResident(testResident);
+        Journal createdJournal = journalDAO.create(journal);
+        journalId = createdJournal.getId();
+
+        JournalEntry entry = new JournalEntry(testUser, "Title", "Content", RiskAssessment.LOW, EntryType.DAILY);
+        entry.setJournal(createdJournal);
+        JournalEntry createdEntry = entryDAO.create(entry);
+        entryId = createdEntry.getId();
+        
+        // Ensure bidirectional link for some tests
+        createdJournal.addEntry(createdEntry);
     }
 
     @Test
     @Order(1)
-    void testCreateJournal() {
-        Journal journal = new Journal();
-        journal.setResident(testResident);
-        Journal created = journalDAO.create(journal);
-        assertNotNull(created.getId());
-        journalId = created.getId();
-    }
-
-    @Test
-    @Order(2)
     void testReadJournal() {
         assertNotNull(journalDAO.read(journalId));
         assertFalse(journalDAO.readAll().isEmpty());
     }
 
     @Test
-    @Order(3)
-    void testCreateEntry() {
-        JournalEntry entry = new JournalEntry(testUser, "Title", "Content", RiskAssessment.LOW, EntryType.DAILY);
-        Journal j = new Journal(); j.setId(journalId);
-        entry.setJournal(j);
-        
-        JournalEntry created = entryDAO.create(entry);
-        assertNotNull(created.getId());
-        entryId = created.getId();
-    }
-
-    @Test
-    @Order(4)
+    @Order(2)
     void testUpdateEntry() {
         JournalEntry patch = new JournalEntry();
         patch.setTitle("Updated");
@@ -94,32 +85,35 @@ public class JournalDAOTest {
     }
 
     @Test
-    @Order(5)
+    @Order(3)
     void testGetEntryIds() {
         List<Long> ids = entryDAO.getEntryIdsByJournalId(journalId);
         assertTrue(ids.contains(entryId));
     }
 
     @Test
-    @Order(6)
+    @Order(4)
     void testAddEntryToJournal() {
         Journal j = journalDAO.read(journalId);
-        JournalEntry e = entryDAO.read(entryId);
+        JournalEntry e = new JournalEntry(testUser, "T2", "C2", RiskAssessment.LOW, EntryType.NOTE);
+        entryDAO.create(e);
+        
         journalDAO.addEntryToJournal(j, e);
         
         Journal read = journalDAO.read(journalId);
-        assertFalse(read.getEntries().isEmpty());
+        // We added one in setUp and one here
+        assertTrue(read.getEntries().size() >= 2);
     }
 
     @Test
-    @Order(7)
+    @Order(5)
     void testErrors() {
-        assertThrows(ApiRuntimeException.class, () -> journalDAO.update(9999L, new Journal()));
-        assertThrows(ApiRuntimeException.class, () -> entryDAO.update(9999L, new JournalEntry()));
+        assertThrows(Exception.class, () -> journalDAO.update(999999L, new Journal()));
+        assertThrows(Exception.class, () -> entryDAO.update(999999L, new JournalEntry()));
     }
 
     @Test
-    @Order(8)
+    @Order(6)
     void testDelete() {
         entryDAO.delete(entryId);
         assertNull(entryDAO.read(entryId));

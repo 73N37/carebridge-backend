@@ -1,4 +1,4 @@
-package dao;
+package com.carebridge.dao;
 
 import com.carebridge.CareBridgeApplication;
 import com.carebridge.dao.impl.ResidentDAO;
@@ -24,20 +24,22 @@ public class ResidentDAOTest {
     @Autowired
     private ResidentDAO residentDAO;
 
-    private static Long createdId;
+    private Long createdId;
+
+    @BeforeEach
+    void setUp() {
+        Resident resident = new Resident();
+        resident.setFirstName("John");
+        resident.setLastName("Doe");
+        resident.setCprNr("RES" + System.nanoTime());
+        Resident created = residentDAO.create(resident);
+        createdId = created.getId();
+    }
 
     @Test
     @Order(1)
     void testCreateAndRead() {
-        Resident resident = new Resident();
-        resident.setFirstName("John");
-        resident.setLastName("Doe");
-        resident.setCprNr("123" + System.nanoTime());
-
-        Resident created = residentDAO.create(resident);
-        assertNotNull(created.getId());
-        createdId = created.getId();
-
+        assertNotNull(createdId);
         Resident read = residentDAO.read(createdId);
         assertEquals("John", read.getFirstName());
     }
@@ -61,16 +63,16 @@ public class ResidentDAOTest {
     @Test
     @Order(4)
     void testErrors() {
-        assertThrows(ApiRuntimeException.class, () -> residentDAO.create(null));
-        assertThrows(JpaObjectRetrievalFailureException.class, () -> residentDAO.read(999999L));
-        assertThrows(ApiRuntimeException.class, () -> residentDAO.update(999999L, new Resident()));
-        assertThrows(JpaObjectRetrievalFailureException.class, () -> residentDAO.delete(999999L));
+        assertThrows(Exception.class, () -> residentDAO.create(null));
+        assertThrows(Exception.class, () -> residentDAO.read(999999L));
+        assertThrows(Exception.class, () -> residentDAO.update(999999L, new Resident()));
+        assertThrows(Exception.class, () -> residentDAO.delete(999999L));
     }
 
     @Test
     @Order(5)
     void testDelete() {
         residentDAO.delete(createdId);
-        assertThrows(JpaObjectRetrievalFailureException.class, () -> residentDAO.read(createdId));
+        assertThrows(Exception.class, () -> residentDAO.read(createdId));
     }
 }

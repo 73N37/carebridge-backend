@@ -1,4 +1,4 @@
-package restTest;
+package com.carebridge.restTest;
 
 import com.carebridge.CareBridgeApplication;
 import com.carebridge.config.Populator;
@@ -23,28 +23,35 @@ public abstract class BaseRestTest {
     @Autowired
     protected Populator populator;
 
-    protected static String userToken;
-    protected static String adminToken;
+    protected String adminToken;
+    protected String userToken;
+
+    private static final java.util.concurrent.atomic.AtomicLong sequence = new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis());
+
+    protected long nextId() {
+        return sequence.incrementAndGet();
+    }
 
     @BeforeAll
     public void setupBase() {
-        RestAssured.baseURI = "http://localhost:" + port + "/api";
+        RestAssured.baseURI = "http://localhost";
+        RestAssured.port = port;
         
         populator.populate();
-
         // Get tokens
         adminToken = login("admin@carebridge.io", "admin");
-        
+
         // Ensure Alice exists and get token
-        ensureUserExists("Alice", "alice@carebridge.io", "password123");
-        userToken = login("alice@carebridge.io", "password123");
+        String aliceEmail = "alice" + nextId() + "@carebridge.io";
+        ensureUserExists("Alice", aliceEmail, "password123");
+        userToken = login(aliceEmail, "password123");
     }
 
     private String login(String email, String password) {
         return given()
                 .contentType("application/json")
                 .body(java.util.Map.of("email", email, "password", password))
-                .post("/auth/login")
+                .post("/api/auth/login")
                 .then()
                 .statusCode(200)
                 .extract().path("token");
@@ -55,7 +62,7 @@ public abstract class BaseRestTest {
         int status = given()
                 .contentType("application/json")
                 .body(java.util.Map.of("email", email, "password", password))
-                .post("/auth/login")
+                .post("/api/auth/login")
                 .getStatusCode();
         
         if (status != 200) {
@@ -67,11 +74,7 @@ public abstract class BaseRestTest {
                     "password", password, 
                     "role", "USER"
                 ))
-                .post("/auth/register");
+                .post("/api/auth/register");
         }
-    }
-
-    static {
-        // Shutdown hook not needed for Spring Boot Test as it handles lifecycle
     }
 }
