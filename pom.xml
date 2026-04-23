@@ -45,6 +45,7 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
+            <version>42.7.10</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -120,6 +121,11 @@
                             <includes>
                                 <include>com/carebridge/**</include>
                             </includes>
+                            <excludes>
+                                <exclude>**/*$HibernateProxy*</exclude>
+                                <exclude>**/*$HibernateInterceptor*</exclude>
+                                <exclude>**/*$JaxbAccessor*</exclude>
+                            </excludes>
                         </configuration>
                     </execution>
                     <execution>
