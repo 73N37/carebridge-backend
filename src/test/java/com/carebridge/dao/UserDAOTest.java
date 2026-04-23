@@ -41,61 +41,105 @@ public class UserDAOTest {
 
     @Test
     @Order(1)
-    void testCreateAndReadUser() {
-        assertNotNull(createdId);
-        User read = userDAO.read(createdId);
-        assertEquals(email, read.getEmail());
+    void testReadBranches() {
+        // ID exists
+        assertNotNull(userDAO.read(createdId));
+        // ID not exists (list.isEmpty() branch)
+        assertNull(userDAO.read(999999L));
     }
 
     @Test
     @Order(2)
-    void testReadByEmail() {
-        User read = userDAO.readByEmail(email);
-        assertNotNull(read);
-        assertNull(userDAO.readByEmail("none@test.com"));
+    void testReadByEmailBranches() {
+        // Success
+        assertNotNull(userDAO.readByEmail(email));
+        // Email not found (list.isEmpty() branch)
+        assertNull(userDAO.readByEmail("notfound@test.com"));
+        // Email null
+        assertThrows(ApiRuntimeException.class, () -> userDAO.readByEmail(null));
+        // Email blank
+        assertThrows(ApiRuntimeException.class, () -> userDAO.readByEmail("  "));
     }
 
     @Test
     @Order(3)
-    void testReadAll() {
-        List<User> users = userDAO.readAll();
-        assertTrue(users.size() > 0);
+    void testCreateBranches() {
+        // u null
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(null));
+        
+        // email null
+        User u1 = new User();
+        u1.setName("N");
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u1));
+        
+        // email blank
+        u1.setEmail("");
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u1));
+        
+        // name null
+        u1.setEmail("e1@t.com");
+        u1.setName(null);
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u1));
+        
+        // name blank
+        u1.setName(" ");
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u1));
+        
+        // role null (sets default)
+        User u2 = new User();
+        u2.setName("N2");
+        u2.setEmail("e2@t.com");
+        u2.setPassword("p");
+        u2.setRole(null);
+        User c2 = userDAO.create(u2);
+        assertEquals(Role.USER, c2.getRole());
+        
+        // exists (exists branch)
+        User u3 = new User();
+        u3.setName("N3");
+        u3.setEmail(email);
+        u3.setPassword("p");
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u3));
     }
 
     @Test
     @Order(4)
-    void testUpdateUser() {
+    void testUpdateBranches() {
+        // existing null
+        assertThrows(ApiRuntimeException.class, () -> userDAO.update(999999L, new User()));
+        
+        // patch name blank/null (no change)
         User patch = new User();
-        patch.setName("New Name");
-        patch.setEmail("new" + System.nanoTime() + "@test.com");
-        patch.setRole(Role.ADMIN);
+        patch.setName("");
+        patch.setEmail(null);
+        patch.setRole(null);
         User updated = userDAO.update(createdId, patch);
-        assertEquals("New Name", updated.getName());
+        assertEquals("DAO Test User", updated.getName());
+        assertEquals(email, updated.getEmail());
+        
+        // Success branches
+        patch.setName("New");
+        patch.setEmail("new@t.com");
+        patch.setRole(Role.ADMIN);
+        updated = userDAO.update(createdId, patch);
+        assertEquals("New", updated.getName());
+        assertEquals("new@t.com", updated.getEmail());
         assertEquals(Role.ADMIN, updated.getRole());
-
-        User patch2 = new User();
-        patch2.setName("");
-        userDAO.update(createdId, patch2);
     }
 
     @Test
     @Order(5)
-    void testErrors() {
-        assertNull(userDAO.read(999999L));
-        assertThrows(ApiRuntimeException.class, () -> userDAO.readByEmail(""));
-        assertThrows(Exception.class, () -> userDAO.create(null));
-        
-        User e1 = new User();
-        assertThrows(ApiRuntimeException.class, () -> userDAO.create(e1)); // Missing fields
-        
-        assertThrows(ApiRuntimeException.class, () -> userDAO.update(999999L, new User()));
+    void testDeleteBranches() {
+        // u null
         assertThrows(ApiRuntimeException.class, () -> userDAO.delete(999999L));
+        // Success
+        userDAO.delete(createdId);
+        assertNull(userDAO.read(createdId));
     }
 
     @Test
     @Order(6)
-    void testDeleteUser() {
-        userDAO.delete(createdId);
-        assertNull(userDAO.read(createdId));
+    void testReadAll() {
+        assertFalse(userDAO.readAll().isEmpty());
     }
 }

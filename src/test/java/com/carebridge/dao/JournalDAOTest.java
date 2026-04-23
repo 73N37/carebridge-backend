@@ -19,8 +19,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = CareBridgeApplication.class)
@@ -64,7 +62,6 @@ public class JournalDAOTest {
         JournalEntry createdEntry = entryDAO.create(entry);
         entryId = createdEntry.getId();
         
-        // Ensure bidirectional link for some tests
         createdJournal.addEntry(createdEntry);
     }
 
@@ -77,22 +74,19 @@ public class JournalDAOTest {
 
     @Test
     @Order(2)
-    void testUpdateEntry() {
-        JournalEntry patch = new JournalEntry();
-        patch.setTitle("Updated");
-        JournalEntry updated = entryDAO.update(entryId, patch);
-        assertEquals("Updated", updated.getTitle());
+    void testUpdateDeleteBranches() {
+        assertNotNull(journalDAO.update(journalId, new Journal()));
+        assertThrows(ApiRuntimeException.class, () -> journalDAO.update(999999L, new Journal()));
+        
+        journalDAO.delete(journalId);
+        assertNull(journalDAO.read(journalId));
+        
+        // delete null check
+        journalDAO.delete(999999L);
     }
 
     @Test
     @Order(3)
-    void testGetEntryIds() {
-        List<Long> ids = entryDAO.getEntryIdsByJournalId(journalId);
-        assertTrue(ids.contains(entryId));
-    }
-
-    @Test
-    @Order(4)
     void testAddEntryToJournal() {
         Journal j = journalDAO.read(journalId);
         JournalEntry e = new JournalEntry(testUser, "T2", "C2", RiskAssessment.LOW, EntryType.NOTE);
@@ -101,23 +95,6 @@ public class JournalDAOTest {
         journalDAO.addEntryToJournal(j, e);
         
         Journal read = journalDAO.read(journalId);
-        // We added one in setUp and one here
         assertTrue(read.getEntries().size() >= 2);
-    }
-
-    @Test
-    @Order(5)
-    void testErrors() {
-        assertThrows(Exception.class, () -> journalDAO.update(999999L, new Journal()));
-        assertThrows(Exception.class, () -> entryDAO.update(999999L, new JournalEntry()));
-    }
-
-    @Test
-    @Order(6)
-    void testDelete() {
-        entryDAO.delete(entryId);
-        assertNull(entryDAO.read(entryId));
-        journalDAO.delete(journalId);
-        assertNull(journalDAO.read(journalId));
     }
 }

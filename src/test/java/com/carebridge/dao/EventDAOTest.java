@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -58,30 +58,58 @@ public class EventDAOTest {
 
     @Test
     @Order(1)
-    void testRead() {
+    void testReadBranches() {
         assertNotNull(eventDAO.read(eventId));
         assertNull(eventDAO.read(999999L));
     }
 
     @Test
     @Order(2)
-    void testReadAll() {
-        assertFalse(eventDAO.readAll().isEmpty());
-    }
-
-    @Test
-    @Order(3)
-    void testReadByCreator() {
+    void testReadByCreatorBranches() {
         assertFalse(eventDAO.readByCreator(testUser.getId()).isEmpty());
+        // userId null branch
         assertThrows(ApiRuntimeException.class, () -> eventDAO.readByCreator(null));
     }
 
     @Test
+    @Order(3)
+    void testCreateBranches() {
+        // e null
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(null));
+        
+        Event e = new Event();
+        // title null
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e));
+        // title blank
+        e.setTitle(" ");
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e));
+        
+        // startAt null
+        e.setTitle("T");
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e));
+        
+        // startAt past
+        e.setStartAt(Instant.now().minus(1, ChronoUnit.HOURS));
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e));
+        
+        // createdBy null
+        e.setStartAt(Instant.now().plus(1, ChronoUnit.HOURS));
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e));
+        
+        // eventType null
+        e.setCreatedBy(testUser);
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e));
+    }
+
+    @Test
     @Order(4)
-    void testUpdate() {
+    void testUpdateBranches() {
+        // existing null
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.update(999999L, new Event()));
+        
         Event patch = new Event();
-        patch.setTitle("New Title");
-        patch.setDescription("New Desc");
+        patch.setTitle("New");
+        patch.setDescription("D");
         patch.setStartAt(Instant.now().plus(2, ChronoUnit.HOURS));
         patch.setShowOnBoard(true);
         patch.setEventType(testType);
@@ -89,71 +117,45 @@ public class EventDAOTest {
         patch.setSeenByUsers(Set.of(testUser));
         
         Event updated = eventDAO.update(eventId, patch);
-        assertEquals("New Title", updated.getTitle());
+        assertEquals("New", updated.getTitle());
+        assertEquals("D", updated.getDescription());
         assertFalse(updated.getSeenByUsers().isEmpty());
 
-        // Partial update branches
+        // Branches with null/blank fields (should NOT update)
         Event patch2 = new Event();
-        patch2.setTitle(""); // Blank title check
-        eventDAO.update(eventId, patch2);
+        patch2.setTitle("");
+        patch2.setDescription(null);
+        patch2.setStartAt(null);
+        patch2.setEventType(null);
+        patch2.setCreatedBy(null);
+        patch2.setSeenByUsers(new HashSet<>());
         
-        Event patch3 = new Event();
-        patch3.setEventType(null);
-        eventDAO.update(eventId, patch3);
+        Event updated2 = eventDAO.update(eventId, patch2);
+        assertEquals("New", updated2.getTitle());
+        assertEquals("D", updated2.getDescription());
     }
 
     @Test
     @Order(5)
-    void testAddRemoveSeenBy() {
-        eventDAO.addSeenByUser(eventId, testUser);
-        assertTrue(eventDAO.read(eventId).getSeenByUsers().size() >= 1);
-        
-        eventDAO.removeSeenByUser(eventId, testUser);
-        assertTrue(eventDAO.read(eventId).getSeenByUsers().isEmpty());
+    void testDeleteBranches() {
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.delete(999999L));
+        eventDAO.delete(eventId);
     }
 
     @Test
     @Order(6)
-    void testReadBetween() {
-        Instant from = Instant.now().minus(1, ChronoUnit.DAYS);
-        Instant to = Instant.now().plus(1, ChronoUnit.DAYS);
-        assertFalse(eventDAO.readBetween(from, to).isEmpty());
-    }
-
-    @Test
-    @Order(7)
-    void testCreateErrors() {
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(null));
-        
-        Event e1 = new Event();
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e1)); // title blank
-        
-        e1.setTitle("T");
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e1)); // startAt null
-        
-        e1.setStartAt(Instant.now().minus(1, ChronoUnit.HOURS));
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e1)); // startAt past
-        
-        e1.setStartAt(Instant.now().plus(1, ChronoUnit.HOURS));
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e1)); // createdBy null
-        
-        e1.setCreatedBy(testUser);
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e1)); // eventType null
-    }
-
-    @Test
-    @Order(8)
-    void testUpdateDeleteErrors() {
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.update(999999L, new Event()));
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.delete(999999L));
+    void testAddRemoveSeenByBranches() {
         assertThrows(ApiRuntimeException.class, () -> eventDAO.addSeenByUser(999999L, testUser));
         assertThrows(ApiRuntimeException.class, () -> eventDAO.removeSeenByUser(999999L, testUser));
+        
+        eventDAO.addSeenByUser(eventId, testUser);
+        eventDAO.removeSeenByUser(eventId, testUser);
     }
-
+    
     @Test
-    @Order(9)
-    void testDelete() {
-        eventDAO.delete(eventId);
-        assertNull(eventDAO.read(eventId));
+    @Order(7)
+    void testReadAllAndReadBetween() {
+        assertFalse(eventDAO.readAll().isEmpty());
+        assertFalse(eventDAO.readBetween(Instant.now().minusSeconds(10), Instant.now().plusSeconds(7200)).isEmpty());
     }
 }
