@@ -44,8 +44,8 @@ public class JournalEntryTest extends BaseRestTest {
         Map<String, Object> req = Map.of(
             "title", "Morning Checkup",
             "content", "Everything looks good.",
-            "entryType", EntryType.NOTE,
-            "riskAssessment", RiskAssessment.LOW
+            "entryType", EntryType.NOTE.name(),
+            "riskAssessment", RiskAssessment.LOW.name()
         );
 
         Object idObj = given()
@@ -77,7 +77,12 @@ public class JournalEntryTest extends BaseRestTest {
     @Test
     @Order(3)
     public void testUpdateJournalEntry() {
-        Map<String, Object> req = Map.of("content", "Updated content");
+        Map<String, Object> req = Map.of(
+            "content", "Updated content",
+            "title", "Morning Checkup",
+            "entryType", EntryType.NOTE.name(),
+            "riskAssessment", RiskAssessment.LOW.name()
+        );
 
         given()
                 .header("Authorization", "Bearer " + adminToken)
@@ -113,7 +118,7 @@ public class JournalEntryTest extends BaseRestTest {
                 .when()
                 .post("/api/journals/" + journalId + "/journal-entries")
                 .then()
-                .statusCode(anyOf(is(400), is(500)));
+                .statusCode(400);
 
         // Missing journal
         given()
