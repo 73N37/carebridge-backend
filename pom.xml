@@ -126,7 +126,6 @@
                                 <exclude>**/*$HibernateInterceptor*</exclude>
                                 <exclude>**/*$HibernateInstantiator*</exclude>
                                 <exclude>**/*$JaxbAccessor*</exclude>
-                                <exclude>**/config/**</exclude>
                             </excludes>
                         </configuration>
                     </execution>

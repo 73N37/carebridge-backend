@@ -3,6 +3,8 @@ package com.carebridge.entities;
 import com.carebridge.crud.annotations.CrudResource;
 import com.carebridge.crud.data.core.BaseEntity;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
 
 @Entity
@@ -18,11 +20,10 @@ public class Journal extends BaseEntity {
     private Resident resident;
 
     // Bi-directional relationship - adding an entry to the journal
-    public void addEntry(JournalEntry entry) {
-        if(entry != null) {
+    public void addEntry(@NotNull JournalEntry entry) {
             entries.add(entry);
             entry.setJournal(this);
-        }
+        
     }
 
     // Getters + Setters

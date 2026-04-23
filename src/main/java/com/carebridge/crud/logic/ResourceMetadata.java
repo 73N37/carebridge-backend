@@ -13,71 +13,68 @@ import java.util.Map;
  * Holds metadata about a CRUD resource.
  */
 public class ResourceMetadata<T extends BaseEntity> {
-    private final Class<T> entityClass;
-    private final Class<?> dtoClass;
-    private final String basePath;
-    private final GenericRepository<T> repository;
-    private final BaseService<T> service;
-    private final CrudInterceptor<T> interceptor;
-    private final List<FieldInfo> fields;
+    private final Class<T>              entityClass;
+    private final String                basePath;
+    private final GenericRepository<T>  repository;
+    private final BaseService<T>        service;
+    private final CrudInterceptor<T>    interceptor;
+    private final List<FieldInfo>       fields;
 
     private ResourceMetadata(Builder<T> builder) {
-        this.entityClass = builder.entityClass;
-        this.dtoClass = builder.dtoClass;
-        this.basePath = builder.basePath;
-        this.repository = builder.repository;
-        this.service = builder.service;
-        this.interceptor = builder.interceptor;
-        this.fields = builder.fields;
+        this.entityClass =  builder.entityClass;
+        this.basePath =     builder.basePath;
+        this.repository =   builder.repository;
+        this.service =      builder.service;
+        this.interceptor =  builder.interceptor;
+        this.fields =       builder.fields;
     }
 
     public static <T extends BaseEntity> Builder<T> builder() {
         return new Builder<>();
     }
 
-    public Class<T> getEntityClass() { return entityClass; }
-    public Class<?> getDtoClass() { return dtoClass; }
-    public String getBasePath() { return basePath; }
+    public Class<T> getEntityClass()            { return entityClass; }
+    public String getBasePath()                 { return basePath; }
     public GenericRepository<T> getRepository() { return repository; }
-    public BaseService<T> getService() { return service; }
-    public CrudInterceptor<T> getInterceptor() { return interceptor; }
-    public List<FieldInfo> getFields() { return fields; }
+    public BaseService<T> getService()          { return service; }
+    public CrudInterceptor<T> getInterceptor()  { return interceptor; }
+    public List<FieldInfo> getFields()          { return fields; }
 
     public static class FieldInfo {
-        private final String name;
-        private final String type;
-        private final boolean required;
-        private final Map<String, Object> constraints;
+        private final String                name;
+        private final String                type;
+        private final boolean               required;
+        private final Map<String, Object>   constraints;
 
-        public FieldInfo(String name, String type, boolean required, Map<String, Object> constraints) {
-            this.name = name;
-            this.type = type;
-            this.required = required;
-            this.constraints = constraints;
+        public FieldInfo
+        (
+            String                  name, 
+            String                  type,
+            boolean                 required, 
+            Map<String, Object>     constraints
+        ) {
+            this.name =             name;
+            this.type =             type;
+            this.required =         required;
+            this.constraints =      constraints;
         }
 
-        public String getName() { return name; }
-        public String getType() { return type; }
-        public boolean isRequired() { return required; }
+        public String getName()                     { return name; }
+        public String getType()                     { return type; }
+        public boolean isRequired()                 { return required; }
         public Map<String, Object> getConstraints() { return constraints; }
     }
 
     public static class Builder<T extends BaseEntity> {
-        private Class<T> entityClass;
-        private Class<?> dtoClass;
-        private String basePath;
-        private GenericRepository<T> repository;
-        private BaseService<T> service;
-        private CrudInterceptor<T> interceptor;
-        private List<FieldInfo> fields;
+        private Class<T>                entityClass;
+        private String                  basePath;
+        private GenericRepository<T>    repository;
+        private BaseService<T>          service;
+        private CrudInterceptor<T>      interceptor;
+        private List<FieldInfo>         fields;
 
         public Builder<T> entityClass(Class<T> entityClass) {
             this.entityClass = entityClass;
-            return this;
-        }
-
-        public Builder<T> dtoClass(Class<?> dtoClass) {
-            this.dtoClass = dtoClass;
             return this;
         }
 

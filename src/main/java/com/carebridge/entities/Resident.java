@@ -35,7 +35,7 @@ public class Resident extends BaseEntity
         this.lastName = lastName;
         this.cprNr = cprNr;
         this.journal = journal;
-        this.users = users != null ? users : new HashSet<>();
+        this.users = new HashSet<>();
     }
 
     public String getCprNr() {

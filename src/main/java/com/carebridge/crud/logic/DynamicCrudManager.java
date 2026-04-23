@@ -101,7 +101,6 @@ public class DynamicCrudManager {
 
         ResourceMetadata<T> metadata = ResourceMetadata.<T>builder()
                 .entityClass(entityClass)
-                .dtoClass(dtoClass)
                 .basePath(path)
                 .repository(repository)
                 .service(service)
