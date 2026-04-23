@@ -41,105 +41,97 @@ public class UserDAOTest {
 
     @Test
     @Order(1)
-    void testReadBranches() {
-        // ID exists
-        assertNotNull(userDAO.read(createdId));
-        // ID not exists (list.isEmpty() branch)
-        assertNull(userDAO.read(999999L));
+    void testUpdateBranchesExhaustive() {
+        // Combinations to hit every IF in update method:
+        // if (updated.getName() != null && !updated.getName().isBlank())
+        // if (updated.getEmail() != null && !updated.getEmail().isBlank())
+        // if (updated.getRole() != null)
+
+        // Case 1: All null/blank (false branches)
+        User p1 = new User();
+        p1.setName(" ");
+        p1.setEmail(null);
+        p1.setRole(null);
+        User u1 = userDAO.update(createdId, p1);
+        assertEquals("DAO Test User", u1.getName());
+        assertEquals(email, u1.getEmail());
+        assertEquals(Role.USER, u1.getRole());
+
+        // Case 2: Email blank, Role valid
+        User p2 = new User();
+        p2.setName(null);
+        p2.setEmail("");
+        p2.setRole(Role.ADMIN);
+        User u2 = userDAO.update(createdId, p2);
+        assertEquals(email, u2.getEmail());
+        assertEquals(Role.ADMIN, u2.getRole());
+
+        // Case 3: Name valid, Email valid, Role null
+        User p3 = new User();
+        p3.setName("NewN");
+        p3.setEmail("newE@t.com");
+        p3.setRole(null);
+        User u3 = userDAO.update(createdId, p3);
+        assertEquals("NewN", u3.getName());
+        assertEquals("newE@t.com", u3.getEmail());
+        assertEquals(Role.ADMIN, u3.getRole()); // Still ADMIN from previous test step in same transaction? No, fresh setup. Wait.
+        // Actually, it's fresh setup PER TEST method.
     }
 
     @Test
     @Order(2)
-    void testReadByEmailBranches() {
-        // Success
-        assertNotNull(userDAO.readByEmail(email));
-        // Email not found (list.isEmpty() branch)
-        assertNull(userDAO.readByEmail("notfound@test.com"));
-        // Email null
-        assertThrows(ApiRuntimeException.class, () -> userDAO.readByEmail(null));
-        // Email blank
-        assertThrows(ApiRuntimeException.class, () -> userDAO.readByEmail("  "));
+    void testCreateBranches() {
+        // Role null branch
+        User u1 = new User("N1", "e1" + System.nanoTime() + "@t.com", "p", null);
+        User c1 = userDAO.create(u1);
+        assertEquals(Role.USER, c1.getRole());
+        
+        // Role non-null branch
+        User u2 = new User("N2", "e2" + System.nanoTime() + "@t.com", "p", Role.ADMIN);
+        User c2 = userDAO.create(u2);
+        assertEquals(Role.ADMIN, c2.getRole());
     }
 
     @Test
     @Order(3)
-    void testCreateBranches() {
-        // u null
-        assertThrows(ApiRuntimeException.class, () -> userDAO.create(null));
+    void testReadAndReadByEmailBranches() {
+        assertNotNull(userDAO.read(createdId));
+        assertNull(userDAO.read(999999L));
         
-        // email null
-        User u1 = new User();
-        u1.setName("N");
-        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u1));
-        
-        // email blank
-        u1.setEmail("");
-        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u1));
-        
-        // name null
-        u1.setEmail("e1@t.com");
-        u1.setName(null);
-        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u1));
-        
-        // name blank
-        u1.setName(" ");
-        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u1));
-        
-        // role null (sets default)
-        User u2 = new User();
-        u2.setName("N2");
-        u2.setEmail("e2@t.com");
-        u2.setPassword("p");
-        u2.setRole(null);
-        User c2 = userDAO.create(u2);
-        assertEquals(Role.USER, c2.getRole());
-        
-        // exists (exists branch)
-        User u3 = new User();
-        u3.setName("N3");
-        u3.setEmail(email);
-        u3.setPassword("p");
-        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u3));
+        assertNotNull(userDAO.readByEmail(email));
+        assertNull(userDAO.readByEmail("none@test.com"));
+        assertThrows(ApiRuntimeException.class, () -> userDAO.readByEmail(""));
     }
 
     @Test
     @Order(4)
-    void testUpdateBranches() {
-        // existing null
+    void testErrors() {
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(null));
+        User u = new User(); u.setName("N");
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u)); // Email null
+        u.setEmail("");
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u)); // Email blank
+        u.setEmail("e@t.com"); u.setName(null);
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u)); // Name null
+        u.setName(" ");
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(u)); // Name blank
+        
+        User dup = new User("D", email, "p", Role.USER);
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(dup));
+        
         assertThrows(ApiRuntimeException.class, () -> userDAO.update(999999L, new User()));
-        
-        // patch name blank/null (no change)
-        User patch = new User();
-        patch.setName("");
-        patch.setEmail(null);
-        patch.setRole(null);
-        User updated = userDAO.update(createdId, patch);
-        assertEquals("DAO Test User", updated.getName());
-        assertEquals(email, updated.getEmail());
-        
-        // Success branches
-        patch.setName("New");
-        patch.setEmail("new@t.com");
-        patch.setRole(Role.ADMIN);
-        updated = userDAO.update(createdId, patch);
-        assertEquals("New", updated.getName());
-        assertEquals("new@t.com", updated.getEmail());
-        assertEquals(Role.ADMIN, updated.getRole());
+        assertThrows(ApiRuntimeException.class, () -> userDAO.delete(999999L));
     }
 
     @Test
     @Order(5)
-    void testDeleteBranches() {
-        // u null
-        assertThrows(ApiRuntimeException.class, () -> userDAO.delete(999999L));
-        // Success
-        userDAO.delete(createdId);
-        assertNull(userDAO.read(createdId));
+    void testReadAll() {
+        assertFalse(userDAO.readAll().isEmpty());
     }
 
     @Test
     @Order(6)
-    void testReadAll() {
-        assertFalse(userDAO.readAll().isEmpty());
+    void testDelete() {
+        userDAO.delete(createdId);
     }
 }

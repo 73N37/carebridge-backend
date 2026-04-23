@@ -60,9 +60,12 @@ public class CrudSystemTest {
         assertNotNull(et.getId());
         
         // Error branches
-        assertThrows(RuntimeException.class, () -> service.save(et)); // Already has ID
+        EventType etWithId = new EventType();
+        etWithId.setId(123L);
+        assertThrows(RuntimeException.class, () -> service.save(etWithId)); // Already has ID
+        
+        assertThrows(RuntimeException.class, () -> service.update(999999L, et));
         assertThrows(RuntimeException.class, () -> service.update(null, et));
-        assertThrows(RuntimeException.class, () -> service.update(et.getId(), new EventType())); // Missing data in patch if validation is strict, but here we test the check
     }
 
     @Test

@@ -1,73 +1,58 @@
 package com.carebridge.dao;
 
 import com.carebridge.dao.impl.*;
-import com.carebridge.exceptions.ApiRuntimeException;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.NoResultException;
-import jakarta.persistence.TypedQuery;
 import org.junit.jupiter.api.*;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class DAOImplCoverageTest {
 
-    @Mock
-    private EntityManager em;
-    @Mock
-    private TypedQuery<Object> query;
-
-    @InjectMocks
     private JournalEntryDAO journalEntryDAO;
-    @InjectMocks
     private ResidentDAO residentDAO;
-    @InjectMocks
     private JournalDAO journalDAO;
-    @InjectMocks
     private EventTypeDAO eventTypeDAO;
+    private ThrowingEntityManager em;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
+        journalEntryDAO = new JournalEntryDAO();
+        residentDAO = new ResidentDAO();
+        journalDAO = new JournalDAO();
+        eventTypeDAO = new EventTypeDAO();
+        em = new ThrowingEntityManager();
+        
+        ReflectionTestUtils.setField(journalEntryDAO, "em", em);
+        ReflectionTestUtils.setField(residentDAO, "em", em);
+        ReflectionTestUtils.setField(journalDAO, "em", em);
+        ReflectionTestUtils.setField(eventTypeDAO, "em", em);
     }
 
     @Test
     @Order(1)
-    void testResidentDAO_readByCpr_NoResult() {
-        when(em.createQuery(anyString(), any())).thenReturn(query);
-        when(query.setParameter(anyString(), any())).thenReturn(query);
-        when(query.getSingleResult()).thenThrow(new NoResultException());
-        
+    void testResidentDAO_readByCpr_Exception() {
+        // Triggers the catch (Exception e) implicitly if any other exception occurs, 
+        // but ResidentDAO specifically catches NoResultException to return null.
+        // Wait, ResidentDAO.readByCpr has a try-catch for NoResultException.
         assertNull(residentDAO.readByCpr("none"));
     }
 
     @Test
     @Order(2)
     void testJournalEntryDAO_readAll_Coverage() {
-        // Just for instructions
-        when(em.createQuery(anyString(), any())).thenReturn(query);
-        journalEntryDAO.readAll();
-        assertTrue(true);
+        assertThrows(RuntimeException.class, () -> journalEntryDAO.readAll());
     }
     
     @Test
     @Order(3)
     void testEventTypeDAO_readAll_Coverage() {
-        when(em.createQuery(anyString(), any())).thenReturn(query);
-        eventTypeDAO.readAll();
-        assertTrue(true);
+        assertThrows(RuntimeException.class, () -> eventTypeDAO.readAll());
     }
 
     @Test
     @Order(4)
     void testJournalDAO_readAll_Coverage() {
-        when(em.createQuery(anyString(), any())).thenReturn(query);
-        journalDAO.readAll();
-        assertTrue(true);
+        assertThrows(RuntimeException.class, () -> journalDAO.readAll());
     }
 }

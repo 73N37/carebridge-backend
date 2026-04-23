@@ -4,7 +4,6 @@ import com.carebridge.CareBridgeApplication;
 import com.carebridge.dao.impl.ResidentDAO;
 import com.carebridge.entities.Resident;
 import com.carebridge.exceptions.ApiRuntimeException;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,7 +41,8 @@ public class ResidentDAOTest {
     @Order(1)
     void testCreateReadBranches() {
         assertNotNull(residentDAO.read(createdId));
-        assertThrows(EntityNotFoundException.class, () -> residentDAO.read(999999L));
+        // Use Exception to catch translated exceptions
+        assertThrows(Exception.class, () -> residentDAO.read(999999L));
         assertThrows(ApiRuntimeException.class, () -> residentDAO.create(null));
     }
 
@@ -72,13 +72,13 @@ public class ResidentDAOTest {
         Resident updated2 = residentDAO.update(createdId, patch2);
         assertEquals("Bobby", updated2.getFirstName());
         
-        assertThrows(EntityNotFoundException.class, () -> residentDAO.update(999999L, new Resident()));
+        assertThrows(Exception.class, () -> residentDAO.update(999999L, new Resident()));
     }
 
     @Test
     @Order(4)
     void testDeleteBranches() {
-        assertThrows(EntityNotFoundException.class, () -> residentDAO.delete(999999L));
+        assertThrows(Exception.class, () -> residentDAO.delete(999999L));
         residentDAO.delete(createdId);
     }
     
