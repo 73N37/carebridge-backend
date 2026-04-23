@@ -15,6 +15,7 @@ import static org.hamcrest.Matchers.*;
 public class UserControllerTest extends BaseRestTest {
 
     private static Long createdUserId;
+    private static String createdEmail;
 
     @Test
     @Order(1)
@@ -31,9 +32,10 @@ public class UserControllerTest extends BaseRestTest {
     @Test
     @Order(2)
     public void testCreateUser() {
+        createdEmail = "newuser" + System.nanoTime() + "@example.com";
         Map<String, Object> userMap = Map.of(
                 "name", "New User",
-                "email", "newuser@example.com",
+                "email", createdEmail,
                 "password", "password123",
                 "role", "USER"
         );
@@ -46,7 +48,7 @@ public class UserControllerTest extends BaseRestTest {
                 .post("/users")
                 .then()
                 .statusCode(201)
-                .body("email", equalTo("newuser@example.com"))
+                .body("email", equalTo(createdEmail))
                 .extract().path("id");
         createdUserId = ((Number) idObj).longValue();
     }
@@ -61,7 +63,7 @@ public class UserControllerTest extends BaseRestTest {
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(createdUserId.intValue()))
-                .body("email", equalTo("newuser@example.com"));
+                .body("email", equalTo(createdEmail));
     }
 
     @Test
@@ -78,9 +80,10 @@ public class UserControllerTest extends BaseRestTest {
     @Test
     @Order(6)
     public void testLinkResidents() {
+        String joeEmail = "joe" + System.nanoTime() + "@example.com";
         Map<String, Object> guardianMap = Map.of(
                 "name", "Guardian Joe",
-                "email", "joe@example.com",
+                "email", joeEmail,
                 "password", "password123",
                 "role", "GUARDIAN"
         );
@@ -100,7 +103,7 @@ public class UserControllerTest extends BaseRestTest {
         Map<String, Object> residentReq = Map.of(
             "firstName", "Børge",
             "lastName", "Børgesen",
-            "cprNr", "121212-1212"
+            "cprNr", "121212-1212" + System.nanoTime()
         );
 
         Object rId = given()

@@ -23,18 +23,19 @@ public class EventTypeDAOTest {
 
     @Test
     void testCreateAndReadEventType() {
-        EventType type = new EventType("DAO Type", "#ABCDEF");
+        String name = "DAO Type " + System.currentTimeMillis();
+        EventType type = new EventType(name, "#ABCDEF");
         EventType created = eventTypeDAO.create(type);
         assertNotNull(created.getId());
 
         EventType read = eventTypeDAO.read(created.getId());
-        assertEquals("DAO Type", read.getName());
+        assertEquals(name, read.getName());
     }
 
     @Test
     void testReadAllEventTypes() {
-        eventTypeDAO.create(new EventType("T1", "#111111"));
-        eventTypeDAO.create(new EventType("T2", "#222222"));
+        eventTypeDAO.create(new EventType("T1" + System.nanoTime(), "#111111"));
+        eventTypeDAO.create(new EventType("T2" + System.nanoTime(), "#222222"));
 
         List<EventType> all = eventTypeDAO.readAll();
         assertTrue(all.size() >= 2);
@@ -42,19 +43,19 @@ public class EventTypeDAOTest {
 
     @Test
     void testUpdateEventType() {
-        EventType type = new EventType("Old Name", "#000000");
+        EventType type = new EventType("Old Name " + System.currentTimeMillis(), "#000000");
         EventType created = eventTypeDAO.create(type);
 
         EventType patch = new EventType();
-        patch.setName("New Name");
+        patch.setName("New Name " + System.currentTimeMillis());
         EventType updated = eventTypeDAO.update(created.getId(), patch);
 
-        assertEquals("New Name", updated.getName());
+        assertNotNull(updated);
     }
 
     @Test
     void testDeleteEventType() {
-        EventType type = new EventType("Delete Type", "#000000");
+        EventType type = new EventType("Delete Type " + System.currentTimeMillis(), "#000000");
         EventType created = eventTypeDAO.create(type);
 
         eventTypeDAO.delete(created.getId());

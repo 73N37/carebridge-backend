@@ -35,8 +35,8 @@ public abstract class BaseRestTest {
         // Get tokens
         adminToken = login("admin@carebridge.io", "admin");
         
-        // Create and login as Alice
-        register("Alice", "alice@carebridge.io", "password123");
+        // Ensure Alice exists and get token
+        ensureUserExists("Alice", "alice@carebridge.io", "password123");
         userToken = login("alice@carebridge.io", "password123");
     }
 
@@ -50,19 +50,25 @@ public abstract class BaseRestTest {
                 .extract().path("token");
     }
 
-    private void register(String name, String email, String password) {
-        try {
+    private void ensureUserExists(String name, String email, String password) {
+        // Try to login first, if fails, register
+        int status = given()
+                .contentType("application/json")
+                .body(java.util.Map.of("email", email, "password", password))
+                .post("/auth/login")
+                .getStatusCode();
+        
+        if (status != 200) {
             given()
-                    .header("Authorization", "Bearer " + adminToken)
-                    .contentType("application/json")
-                    .body(java.util.Map.of(
-                        "name", name, 
-                        "email", email, 
-                        "password", password, 
-                        "role", "USER"
-                    ))
-                    .post("/auth/register");
-        } catch (Exception ignored) {}
+                .contentType("application/json")
+                .body(java.util.Map.of(
+                    "name", name, 
+                    "email", email, 
+                    "password", password, 
+                    "role", "USER"
+                ))
+                .post("/auth/register");
+        }
     }
 
     static {

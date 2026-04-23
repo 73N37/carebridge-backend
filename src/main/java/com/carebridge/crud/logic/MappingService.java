@@ -102,7 +102,6 @@ public class MappingService {
         try {
             return objectMapper.convertValue(data, entityClass);
         } catch (Exception e) {
-            log.error("Failed to convert Map to entity {}: {}", entityClass.getSimpleName(), e.getMessage());
             throw new RuntimeException("Conversion failed", e);
         }
     }

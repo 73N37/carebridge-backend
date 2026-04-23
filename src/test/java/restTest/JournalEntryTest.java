@@ -23,7 +23,7 @@ public class JournalEntryTest extends BaseRestTest {
         Map<String, Object> residentReq = Map.of(
             "firstName", "Børge",
             "lastName", "Børgesen",
-            "cprNr", "121212-1212"
+            "cprNr", "121212-1212" + System.nanoTime()
         );
 
         Object jId = given()
@@ -100,5 +100,73 @@ public class JournalEntryTest extends BaseRestTest {
                 .then()
                 .statusCode(200)
                 .body("$", hasItem(createdEntryId.intValue()));
+    }
+
+    @Test
+    @Order(5)
+    public void testCreateEntryErrors() {
+        // Missing title
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("content", "Content", "entryType", EntryType.NOTE, "riskAssessment", RiskAssessment.LOW))
+                .when()
+                .post("/journals/" + journalId + "/journal-entries")
+                .then()
+                .statusCode(403); // Security/Validation block
+
+        // Missing journal
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("title", "T", "content", "C", "entryType", EntryType.NOTE, "riskAssessment", RiskAssessment.LOW))
+                .when()
+                .post("/journals/9999/journal-entries")
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    @Order(6)
+    public void testUpdateEntryErrors() {
+        // Wrong journal ID
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("content", "New"))
+                .when()
+                .put("/journals/9999/journal-entries/" + createdEntryId)
+                .then()
+                .statusCode(403);
+        
+        // Non-existent entry
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("content", "New"))
+                .when()
+                .put("/journals/" + journalId + "/journal-entries/9999")
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    @Order(7)
+    public void testReadEntryErrors() {
+        // Wrong journal ID
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/journals/9999/journal-entries/" + createdEntryId)
+                .then()
+                .statusCode(anyOf(is(400), is(403)));
+        
+        // Not found
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/journals/" + journalId + "/journal-entries/9999")
+                .then()
+                .statusCode(404);
     }
 }
