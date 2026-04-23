@@ -45,9 +45,10 @@ public class SecurityControllerTest extends BaseRestTest {
     @Test
     @Order(3)
     public void testRegister() {
+        String email = "doctor" + System.nanoTime() + "@carebridge.io";
         Map<String, Object> regReq = Map.of(
             "name", "New Doc",
-            "email", "doctor@carebridge.io",
+            "email", email,
             "password", "doc123",
             "displayName", "Dr. New",
             "role", Role.CAREWORKER.name()
@@ -62,6 +63,57 @@ public class SecurityControllerTest extends BaseRestTest {
                 .then()
                 .statusCode(201)
                 .body("token", notNullValue())
-                .body("email", equalTo("doctor@carebridge.io"));
+                .body("email", equalTo(email));
+    }
+
+    @Test
+    @Order(4)
+    public void testLoginErrors() {
+        // Wrong password
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("email", "admin@carebridge.io", "password", "wrong"))
+                .when()
+                .post("/auth/login")
+                .then()
+                .statusCode(401);
+
+        // Non-existent user
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("email", "nonexistent@carebridge.io", "password", "pass"))
+                .when()
+                .post("/auth/login")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    @Order(5)
+    public void testRegisterErrors() {
+        // Missing fields
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("name", "NoEmail"))
+                .when()
+                .post("/auth/register")
+                .then()
+                .statusCode(500);
+
+        // Duplicate email
+        String email = "dup" + System.nanoTime() + "@test.com";
+        Map<String, Object> req = Map.of("name", "U", "email", email, "password", "p", "role", "USER");
+        
+        given().header("Authorization", "Bearer " + adminToken).contentType(ContentType.JSON).body(req).post("/auth/register");
+        
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(req)
+                .when()
+                .post("/auth/register")
+                .then()
+                .statusCode(500);
     }
 }

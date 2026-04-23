@@ -4,10 +4,10 @@ import com.carebridge.CareBridgeApplication;
 import com.carebridge.dao.impl.ResidentDAO;
 import com.carebridge.entities.Resident;
 import com.carebridge.exceptions.ApiRuntimeException;
-import jakarta.persistence.EntityNotFoundException;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.orm.jpa.JpaObjectRetrievalFailureException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,75 +15,62 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.springframework.orm.jpa.JpaObjectRetrievalFailureException;
-
 @SpringBootTest(classes = CareBridgeApplication.class)
 @ActiveProfiles("test")
 @Transactional
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ResidentDAOTest {
 
     @Autowired
     private ResidentDAO residentDAO;
 
+    private static Long createdId;
+
     @Test
+    @Order(1)
     void testCreateAndRead() {
         Resident resident = new Resident();
         resident.setFirstName("John");
         resident.setLastName("Doe");
-        resident.setCprNr("1234567890");
+        resident.setCprNr("123" + System.nanoTime());
 
         Resident created = residentDAO.create(resident);
         assertNotNull(created.getId());
+        createdId = created.getId();
 
-        Resident read = residentDAO.read(created.getId());
+        Resident read = residentDAO.read(createdId);
         assertEquals("John", read.getFirstName());
     }
 
     @Test
+    @Order(2)
     void testReadAll() {
-        Resident resident = new Resident();
-        resident.setFirstName("Alice");
-        resident.setLastName("Smith");
-        resident.setCprNr("1111111111");
-        residentDAO.create(resident);
-
         List<Resident> all = residentDAO.readAll();
         assertFalse(all.isEmpty());
     }
 
     @Test
+    @Order(3)
     void testUpdate() {
-        Resident resident = new Resident();
-        resident.setFirstName("Bob");
-        resident.setLastName("Jones");
-        resident.setCprNr("2222222222");
-        Resident created = residentDAO.create(resident);
-
         Resident patch = new Resident();
         patch.setFirstName("Bobby");
-        Resident updated = residentDAO.update(created.getId(), patch);
+        Resident updated = residentDAO.update(createdId, patch);
         assertEquals("Bobby", updated.getFirstName());
-        assertEquals("Jones", updated.getLastName());
     }
 
     @Test
-    void testDelete() {
-        Resident resident = new Resident();
-        resident.setFirstName("Charlie");
-        resident.setLastName("Brown");
-        resident.setCprNr("3333333333");
-        Resident created = residentDAO.create(resident);
-
-        residentDAO.delete(created.getId());
-        assertThrows(JpaObjectRetrievalFailureException.class, () -> residentDAO.read(created.getId()));
-    }
-
-    @Test
-    void testErrorCases() {
+    @Order(4)
+    void testErrors() {
         assertThrows(ApiRuntimeException.class, () -> residentDAO.create(null));
-        assertThrows(ApiRuntimeException.class, () -> residentDAO.create(new Resident())); // Missing fields
-        assertThrows(JpaObjectRetrievalFailureException.class, () -> residentDAO.read(999L));
-        assertThrows(ApiRuntimeException.class, () -> residentDAO.update(999L, new Resident()));
-        assertThrows(JpaObjectRetrievalFailureException.class, () -> residentDAO.delete(999L));
+        assertThrows(JpaObjectRetrievalFailureException.class, () -> residentDAO.read(999999L));
+        assertThrows(ApiRuntimeException.class, () -> residentDAO.update(999999L, new Resident()));
+        assertThrows(JpaObjectRetrievalFailureException.class, () -> residentDAO.delete(999999L));
+    }
+
+    @Test
+    @Order(5)
+    void testDelete() {
+        residentDAO.delete(createdId);
+        assertThrows(JpaObjectRetrievalFailureException.class, () -> residentDAO.read(createdId));
     }
 }

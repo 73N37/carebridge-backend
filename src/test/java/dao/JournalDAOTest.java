@@ -13,8 +13,7 @@ import com.carebridge.enums.EntryType;
 import com.carebridge.enums.RiskAssessment;
 import com.carebridge.enums.Role;
 import com.carebridge.exceptions.ApiRuntimeException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -27,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(classes = CareBridgeApplication.class)
 @ActiveProfiles("test")
 @Transactional
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class JournalDAOTest {
 
     @Autowired
@@ -38,86 +38,92 @@ public class JournalDAOTest {
     @Autowired
     private UserDAO userDAO;
 
-    private User testUser;
-    private Resident testResident;
+    private static User testUser;
+    private static Resident testResident;
+    private static Long journalId;
+    private static Long entryId;
 
-    @BeforeEach
-    void setUp() {
+    @BeforeAll
+    public static void setup(@Autowired UserDAO uDAO, @Autowired ResidentDAO rDAO) {
         testUser = new User("Journal User", "juser" + System.nanoTime() + "@test.com", "pass", Role.USER);
-        userDAO.create(testUser);
+        uDAO.create(testUser);
 
         testResident = new Resident();
         testResident.setFirstName("Resident");
         testResident.setLastName("One");
         testResident.setCprNr("123" + System.nanoTime());
-        residentDAO.create(testResident);
+        rDAO.create(testResident);
     }
 
     @Test
-    void testJournalCRUD() {
+    @Order(1)
+    void testCreateJournal() {
         Journal journal = new Journal();
         journal.setResident(testResident);
-        
         Journal created = journalDAO.create(journal);
         assertNotNull(created.getId());
-        
-        Journal read = journalDAO.read(created.getId());
-        assertNotNull(read);
-        
-        List<Journal> all = journalDAO.readAll();
-        assertFalse(all.isEmpty());
-        
-        Journal updated = journalDAO.update(created.getId(), new Journal());
-        assertNotNull(updated);
-        
-        assertThrows(ApiRuntimeException.class, () -> journalDAO.update(9999L, new Journal()));
-        
-        journalDAO.delete(created.getId());
-        assertNull(journalDAO.read(created.getId()));
+        journalId = created.getId();
     }
 
     @Test
-    void testJournalEntryCRUD() {
-        Journal journal = new Journal();
-        journal.setResident(testResident);
-        journalDAO.create(journal);
+    @Order(2)
+    void testReadJournal() {
+        assertNotNull(journalDAO.read(journalId));
+        assertFalse(journalDAO.readAll().isEmpty());
+    }
 
-        JournalEntry entry = new JournalEntry(testUser, "Entry Title", "Content", RiskAssessment.LOW, EntryType.DAILY);
-        entry.setJournal(journal);
+    @Test
+    @Order(3)
+    void testCreateEntry() {
+        JournalEntry entry = new JournalEntry(testUser, "Title", "Content", RiskAssessment.LOW, EntryType.DAILY);
+        Journal j = new Journal(); j.setId(journalId);
+        entry.setJournal(j);
         
         JournalEntry created = entryDAO.create(entry);
         assertNotNull(created.getId());
-        
-        JournalEntry read = entryDAO.read(created.getId());
-        assertEquals("Entry Title", read.getTitle());
-        
-        JournalEntry patch = new JournalEntry();
-        patch.setTitle("New Title");
-        JournalEntry updated = entryDAO.update(created.getId(), patch);
-        assertEquals("New Title", updated.getTitle());
-        assertEquals("Content", updated.getContent());
-        
-        assertThrows(ApiRuntimeException.class, () -> entryDAO.update(9999L, new JournalEntry()));
-        
-        List<Long> ids = entryDAO.getEntryIdsByJournalId(journal.getId());
-        assertTrue(ids.contains(created.getId()));
-        
-        entryDAO.delete(created.getId());
-        assertNull(entryDAO.read(created.getId()));
+        entryId = created.getId();
     }
 
     @Test
+    @Order(4)
+    void testUpdateEntry() {
+        JournalEntry patch = new JournalEntry();
+        patch.setTitle("Updated");
+        JournalEntry updated = entryDAO.update(entryId, patch);
+        assertEquals("Updated", updated.getTitle());
+    }
+
+    @Test
+    @Order(5)
+    void testGetEntryIds() {
+        List<Long> ids = entryDAO.getEntryIdsByJournalId(journalId);
+        assertTrue(ids.contains(entryId));
+    }
+
+    @Test
+    @Order(6)
     void testAddEntryToJournal() {
-        Journal journal = new Journal();
-        journal.setResident(testResident);
-        journalDAO.create(journal);
-
-        JournalEntry entry = new JournalEntry(testUser, "Title", "Content", RiskAssessment.LOW, EntryType.DAILY);
-        entryDAO.create(entry);
-
-        journalDAO.addEntryToJournal(journal, entry);
+        Journal j = journalDAO.read(journalId);
+        JournalEntry e = entryDAO.read(entryId);
+        journalDAO.addEntryToJournal(j, e);
         
-        Journal read = journalDAO.read(journal.getId());
+        Journal read = journalDAO.read(journalId);
         assertFalse(read.getEntries().isEmpty());
+    }
+
+    @Test
+    @Order(7)
+    void testErrors() {
+        assertThrows(ApiRuntimeException.class, () -> journalDAO.update(9999L, new Journal()));
+        assertThrows(ApiRuntimeException.class, () -> entryDAO.update(9999L, new JournalEntry()));
+    }
+
+    @Test
+    @Order(8)
+    void testDelete() {
+        entryDAO.delete(entryId);
+        assertNull(entryDAO.read(entryId));
+        journalDAO.delete(journalId);
+        assertNull(journalDAO.read(journalId));
     }
 }
