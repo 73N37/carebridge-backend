@@ -44,7 +44,7 @@ public class User extends BaseEntity implements ISecurityUser {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
-    private Role role = Role.USER;
+    private Role role;
 
     @Column(nullable = false, updatable = false)
     private Instant created_at;
