@@ -1,5 +1,6 @@
 package com.carebridge.restTest;
 
+import com.carebridge.entities.Resident;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.*;
 
@@ -39,6 +40,21 @@ public class ResidentTest extends BaseRestTest {
         given()
                 .contentType(ContentType.JSON)
                 .body(Map.of("firstName", "Non", "lastName", "Auth", "cprNr", "NOAUTH" + nextId()))
+                .when()
+                .post("/api/residents/create")
+                .then()
+                .statusCode(201);
+        
+        // Branch: jwtUser present but user not in DB (trigger user == null branch)
+        String tempEmail = "res-link-nf-" + nextId() + "@test.com";
+        ensureUserExists("Ev", tempEmail, "p");
+        String tempToken = login(tempEmail, "p");
+        userDAO.delete(userDAO.readByEmail(tempEmail).getId());
+        
+        given()
+                .header("Authorization", "Bearer " + tempToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("firstName", "FN", "lastName", "LN", "cprNr", "C" + nextId()))
                 .when()
                 .post("/api/residents/create")
                 .then()

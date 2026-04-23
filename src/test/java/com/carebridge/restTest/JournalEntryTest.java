@@ -2,6 +2,9 @@ package com.carebridge.restTest;
 
 import com.carebridge.enums.EntryType;
 import com.carebridge.enums.RiskAssessment;
+import com.carebridge.entities.JournalEntry;
+import com.carebridge.entities.Journal;
+import com.carebridge.entities.User;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.*;
 
@@ -79,8 +82,6 @@ public class JournalEntryTest extends BaseRestTest {
                 .post("/api/journals/" + journalId + "/journal-entries")
                 .then()
                 .statusCode(400);
-
-        // Branch: jwtUser present (already covered by adminToken)
     }
 
     @Test
@@ -108,6 +109,35 @@ public class JournalEntryTest extends BaseRestTest {
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
                 .get("/api/journals/111111/journal-entries/" + createdEntryId)
+                .then()
+                .statusCode(400);
+        
+        // Branch: entry.getJournal() == null
+        // Find admin user ID
+        User admin = userDAO.readByEmail("admin@carebridge.io");
+        
+        Map<String, Object> orphanReq = Map.of(
+            "title", "Orphan",
+            "content", "C",
+            "entryType", "NOTE",
+            "riskAssessment", "LOW",
+            "author", Map.of("id", admin.getId())
+        );
+        Object oId = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(orphanReq)
+                .when()
+                .post("/api/v3/journal-entries")
+                .then()
+                .statusCode(201)
+                .extract().path("id");
+        Long orphanId = ((Number) oId).longValue();
+        
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/api/journals/" + journalId + "/journal-entries/" + orphanId)
                 .then()
                 .statusCode(400);
     }
@@ -151,5 +181,16 @@ public class JournalEntryTest extends BaseRestTest {
                 .put("/api/journals/111111/journal-entries/" + createdEntryId)
                 .then()
                 .statusCode(400);
+    }
+
+    @Test
+    @Order(4)
+    public void testGetAll() {
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/api/journals/" + journalId + "/journal-entries")
+                .then()
+                .statusCode(200);
     }
 }

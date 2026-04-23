@@ -41,8 +41,8 @@ public class ResidentDAOTest {
     @Order(1)
     void testCreateReadBranches() {
         assertNotNull(residentDAO.read(createdId));
-        // Use Exception to catch translated exceptions
-        assertThrows(Exception.class, () -> residentDAO.read(999999L));
+        // Changed: now returns null instead of throwing
+        assertNull(residentDAO.read(999999L));
         assertThrows(ApiRuntimeException.class, () -> residentDAO.create(null));
     }
 
@@ -72,14 +72,17 @@ public class ResidentDAOTest {
         Resident updated2 = residentDAO.update(createdId, patch2);
         assertEquals("Bobby", updated2.getFirstName());
         
-        assertThrows(Exception.class, () -> residentDAO.update(999999L, new Resident()));
+        assertNull(residentDAO.update(999999L, new Resident()));
     }
 
     @Test
     @Order(4)
     void testDeleteBranches() {
-        assertThrows(Exception.class, () -> residentDAO.delete(999999L));
+        // delete non-existent (null check branch)
+        residentDAO.delete(999999L);
+        // delete existent
         residentDAO.delete(createdId);
+        assertNull(residentDAO.read(createdId));
     }
     
     @Test

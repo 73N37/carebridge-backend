@@ -4,7 +4,6 @@ import com.carebridge.dao.IDAO;
 import com.carebridge.entities.Resident;
 import com.carebridge.exceptions.ApiRuntimeException;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
@@ -28,9 +27,7 @@ public class ResidentDAO implements IDAO<Resident, Long> {
 
     @Override
     public Resident read(Long id) {
-        Resident r = em.find(Resident.class, id);
-        if (r == null) throw new EntityNotFoundException("Resident not found with ID: " + id);
-        return r;
+        return em.find(Resident.class, id);
     }
 
     public Resident readByCpr(String cpr) {
@@ -51,6 +48,7 @@ public class ResidentDAO implements IDAO<Resident, Long> {
     @Override
     public Resident update(Long id, Resident patch) {
         Resident managed = read(id);
+        if (managed == null) return null;
         if (patch.getFirstName() != null) managed.setFirstName(patch.getFirstName());
         if (patch.getLastName() != null) managed.setLastName(patch.getLastName());
         if (patch.getCprNr() != null) managed.setCprNr(patch.getCprNr());
@@ -60,9 +58,8 @@ public class ResidentDAO implements IDAO<Resident, Long> {
     @Override
     public void delete(Long id) {
         Resident managed = em.find(Resident.class, id);
-        if (managed == null) {
-            throw new EntityNotFoundException("Resident not found with ID: " + id);
+        if (managed != null) {
+            em.remove(managed);
         }
-        em.remove(managed);
     }
 }
