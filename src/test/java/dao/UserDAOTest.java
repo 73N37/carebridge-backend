@@ -4,11 +4,14 @@ import com.carebridge.CareBridgeApplication;
 import com.carebridge.dao.impl.UserDAO;
 import com.carebridge.entities.User;
 import com.carebridge.enums.Role;
+import com.carebridge.exceptions.ApiRuntimeException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -32,7 +35,13 @@ public class UserDAOTest {
         assertNotNull(created.getId());
 
         User read = userDAO.read(created.getId());
+        assertNotNull(read);
         assertEquals("daotest@example.com", read.getEmail());
+    }
+
+    @Test
+    void testReadNonExistentUser() {
+        assertNull(userDAO.read(999999L));
     }
 
     @Test
@@ -50,6 +59,54 @@ public class UserDAOTest {
     }
 
     @Test
+    void testReadByBlankEmail() {
+        assertThrows(ApiRuntimeException.class, () -> userDAO.readByEmail(""));
+        assertThrows(ApiRuntimeException.class, () -> userDAO.readByEmail(null));
+    }
+
+    @Test
+    void testReadAll() {
+        User user = new User();
+        user.setName("All Test");
+        user.setEmail("all@example.com");
+        user.setRole(Role.USER);
+        user.setPassword("pass");
+        userDAO.create(user);
+
+        List<User> users = userDAO.readAll();
+        assertTrue(users.size() > 0);
+    }
+
+    @Test
+    void testCreateNullUser() {
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(null));
+    }
+
+    @Test
+    void testCreateUserWithBlankFields() {
+        User user = new User();
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(user)); // Missing email/name
+        
+        user.setEmail("test@test.com");
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(user)); // Missing name
+    }
+
+    @Test
+    void testCreateDuplicateEmail() {
+        User user1 = new User();
+        user1.setName("User 1");
+        user1.setEmail("duplicate@example.com");
+        user1.setPassword("pass");
+        userDAO.create(user1);
+
+        User user2 = new User();
+        user2.setName("User 2");
+        user2.setEmail("duplicate@example.com");
+        user2.setPassword("pass");
+        assertThrows(ApiRuntimeException.class, () -> userDAO.create(user2));
+    }
+
+    @Test
     void testUpdateUser() {
         User user = new User();
         user.setName("Original Name");
@@ -60,9 +117,20 @@ public class UserDAOTest {
 
         User patch = new User();
         patch.setName("New Name");
+        patch.setEmail("newemail@example.com");
+        patch.setRole(Role.ADMIN);
         User updated = userDAO.update(created.getId(), patch);
 
         assertEquals("New Name", updated.getName());
+        assertEquals("newemail@example.com", updated.getEmail());
+        assertEquals(Role.ADMIN, updated.getRole());
+    }
+
+    @Test
+    void testUpdateNonExistentUser() {
+        User patch = new User();
+        patch.setName("New Name");
+        assertThrows(ApiRuntimeException.class, () -> userDAO.update(999999L, patch));
     }
 
     @Test
@@ -76,5 +144,10 @@ public class UserDAOTest {
 
         userDAO.delete(created.getId());
         assertNull(userDAO.read(created.getId()));
+    }
+
+    @Test
+    void testDeleteNonExistentUser() {
+        assertThrows(ApiRuntimeException.class, () -> userDAO.delete(999999L));
     }
 }

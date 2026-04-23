@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.transaction.annotation.Transactional;
+
 /**
  * [API LAYER]
  * A universal Spring Boot controller that handles CRUD requests for all registered entities.
@@ -69,6 +71,7 @@ public class UniversalCrudController {
 
     @PostMapping("/{resource}")
     @DynamicDTO
+    @Transactional
     public ResponseEntity<BaseEntity> create(
             @PathVariable String resource,
             @RequestBody Map<String, Object> body) {
@@ -85,6 +88,7 @@ public class UniversalCrudController {
 
     @PutMapping("/{resource}/{id}")
     @DynamicDTO
+    @Transactional
     public ResponseEntity<BaseEntity> update(
             @PathVariable String resource,
             @PathVariable Long id,
@@ -101,6 +105,7 @@ public class UniversalCrudController {
     }
 
     @DeleteMapping("/{resource}/{id}")
+    @Transactional
     public ResponseEntity<Void> delete(
             @PathVariable String resource,
             @PathVariable Long id) {
