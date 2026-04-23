@@ -3,6 +3,7 @@ package com.carebridge.dao;
 import com.carebridge.CareBridgeApplication;
 import com.carebridge.dao.impl.EventTypeDAO;
 import com.carebridge.entities.EventType;
+import com.carebridge.exceptions.ApiRuntimeException;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,33 +35,38 @@ public class EventTypeDAOTest {
 
     @Test
     @Order(1)
-    void testCreateAndReadEventType() {
-        assertNotNull(createdId);
-        EventType read = eventTypeDAO.read(createdId);
-        assertNotNull(read);
+    void testReadAndReadAll() {
+        assertNotNull(eventTypeDAO.read(createdId));
+        assertFalse(eventTypeDAO.readAll().isEmpty());
     }
 
     @Test
     @Order(2)
-    void testReadAllEventTypes() {
-        List<EventType> all = eventTypeDAO.readAll();
-        assertTrue(all.size() >= 1);
+    void testUpdateBranches() {
+        EventType patch = new EventType();
+        patch.setName("NewN");
+        patch.setColorHex("#123");
+        EventType updated = eventTypeDAO.update(createdId, patch);
+        assertEquals("NewN", updated.getName());
+        assertEquals("#123", updated.getColorHex());
+
+        // Null branches
+        EventType patch2 = new EventType();
+        patch2.setName(null);
+        patch2.setColorHex(null);
+        EventType updated2 = eventTypeDAO.update(createdId, patch2);
+        assertEquals("NewN", updated2.getName());
+        
+        assertThrows(ApiRuntimeException.class, () -> eventTypeDAO.update(999999L, new EventType()));
     }
 
     @Test
     @Order(3)
-    void testUpdateEventType() {
-        String newName = "New Name " + System.nanoTime();
-        EventType patch = new EventType();
-        patch.setName(newName);
-        EventType updated = eventTypeDAO.update(createdId, patch);
-        assertEquals(newName, updated.getName());
-    }
-
-    @Test
-    @Order(4)
-    void testDeleteEventType() {
+    void testDelete() {
         eventTypeDAO.delete(createdId);
         assertNull(eventTypeDAO.read(createdId));
+        
+        // delete null check
+        eventTypeDAO.delete(999999L);
     }
 }

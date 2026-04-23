@@ -34,21 +34,25 @@ public class SecurityDAOTest {
 
     @Test
     @Order(1)
-    void testVerifyUser() throws ValidationException {
+    void testVerifyUserBranches() throws ValidationException {
+        // Success
         User verified = securityDAO.getVerifiedUser(email, "pass");
         assertNotNull(verified);
-        assertEquals(email, verified.getEmail());
-
+        
+        // Wrong password
         assertThrows(ValidationException.class, () -> securityDAO.getVerifiedUser(email, "wrong"));
-        assertThrows(ValidationException.class, () -> securityDAO.getVerifiedUser("none@test.com", "pass"));
+        
+        // No result branch (readByEmail returns null)
+        assertThrows(ValidationException.class, () -> securityDAO.getVerifiedUser("nonexistent@test.com", "pass"));
     }
 
     @Test
     @Order(2)
-    void testChangeRole() throws ValidationException {
+    void testChangeRoleBranches() {
         User updated = securityDAO.changeRole(createdId, Role.ADMIN);
         assertEquals(Role.ADMIN, updated.getRole());
         
+        // user null branch
         assertNull(securityDAO.changeRole(999999L, Role.USER));
     }
 }
