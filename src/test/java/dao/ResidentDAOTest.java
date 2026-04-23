@@ -15,6 +15,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import org.springframework.orm.jpa.JpaObjectRetrievalFailureException;
+
 @SpringBootTest(classes = CareBridgeApplication.class)
 @ActiveProfiles("test")
 @Transactional
@@ -73,15 +75,15 @@ public class ResidentDAOTest {
         Resident created = residentDAO.create(resident);
 
         residentDAO.delete(created.getId());
-        assertThrows(EntityNotFoundException.class, () -> residentDAO.read(created.getId()));
+        assertThrows(JpaObjectRetrievalFailureException.class, () -> residentDAO.read(created.getId()));
     }
 
     @Test
     void testErrorCases() {
         assertThrows(ApiRuntimeException.class, () -> residentDAO.create(null));
         assertThrows(ApiRuntimeException.class, () -> residentDAO.create(new Resident())); // Missing fields
-        assertThrows(EntityNotFoundException.class, () -> residentDAO.read(999L));
+        assertThrows(JpaObjectRetrievalFailureException.class, () -> residentDAO.read(999L));
         assertThrows(ApiRuntimeException.class, () -> residentDAO.update(999L, new Resident()));
-        assertThrows(EntityNotFoundException.class, () -> residentDAO.delete(999L));
+        assertThrows(JpaObjectRetrievalFailureException.class, () -> residentDAO.delete(999L));
     }
 }

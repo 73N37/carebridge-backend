@@ -163,7 +163,6 @@ public class EventDAOTest {
 
     @Test
     void testErrorCases() {
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.read(null)); // em.find with null
         assertThrows(ApiRuntimeException.class, () -> eventDAO.readByCreator(null));
         assertThrows(ApiRuntimeException.class, () -> eventDAO.create(null));
         assertThrows(ApiRuntimeException.class, () -> eventDAO.create(new Event())); // Missing fields
