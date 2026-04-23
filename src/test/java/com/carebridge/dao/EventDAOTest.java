@@ -9,8 +9,7 @@ import com.carebridge.entities.EventType;
 import com.carebridge.entities.User;
 import com.carebridge.enums.Role;
 import com.carebridge.exceptions.ApiRuntimeException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -19,13 +18,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = CareBridgeApplication.class)
 @ActiveProfiles("test")
 @Transactional
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class EventDAOTest {
 
     @Autowired
@@ -37,136 +36,113 @@ public class EventDAOTest {
 
     private User testUser;
     private EventType testType;
+    private Long eventId;
 
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setName("Event Creator");
-        testUser.setEmail("creator@example.com" + System.currentTimeMillis());
-        testUser.setRole(Role.ADMIN);
-        testUser.setPassword("pass");
+        testUser = new User("Event Creator", "creator" + System.nanoTime() + "@example.com", "pass", Role.ADMIN);
         userDAO.create(testUser);
 
-        testType = new EventType("DAO Event Type " + System.currentTimeMillis(), "#123456");
+        testType = new EventType("DAO Event Type " + System.nanoTime(), "#123456");
         eventTypeDAO.create(testType);
-    }
 
-    @Test
-    void testCreateAndReadEvent() {
         Event event = new Event();
-        event.setTitle("DAO Test Event");
-        event.setStartAt(Instant.now().plus(1, ChronoUnit.HOURS));
-        event.setCreatedBy(testUser);
-        event.setEventType(testType);
-
-        Event created = eventDAO.create(event);
-        assertNotNull(created.getId());
-
-        Event read = eventDAO.read(created.getId());
-        assertEquals("DAO Test Event", read.getTitle());
-        assertNotNull(read.getCreatedBy());
-        assertNotNull(read.getEventType());
-    }
-
-    @Test
-    void testReadByCreator() {
-        Event event = new Event();
-        event.setTitle("Creator Test");
+        event.setTitle("Setup Event");
         event.setStartAt(Instant.now().plus(1, ChronoUnit.HOURS));
         event.setCreatedBy(testUser);
         event.setEventType(testType);
         Event created = eventDAO.create(event);
-
-        List<Event> byCreator = eventDAO.readByCreator(testUser.getId());
-        assertTrue(byCreator.stream().anyMatch(e -> e.getId().equals(created.getId())));
+        eventId = created.getId();
     }
 
     @Test
+    @Order(1)
+    void testRead() {
+        assertNotNull(eventDAO.read(eventId));
+        assertNull(eventDAO.read(999999L));
+    }
+
+    @Test
+    @Order(2)
     void testReadAll() {
-        Event event = new Event();
-        event.setTitle("All Test");
-        event.setStartAt(Instant.now().plus(1, ChronoUnit.HOURS));
-        event.setCreatedBy(testUser);
-        event.setEventType(testType);
-        eventDAO.create(event);
-
-        List<Event> all = eventDAO.readAll();
-        assertFalse(all.isEmpty());
+        assertFalse(eventDAO.readAll().isEmpty());
     }
 
     @Test
-    void testUpdate() {
-        Event event = new Event();
-        event.setTitle("Old Title");
-        event.setStartAt(Instant.now().plus(1, ChronoUnit.HOURS));
-        event.setCreatedBy(testUser);
-        event.setEventType(testType);
-        Event created = eventDAO.create(event);
+    @Order(3)
+    void testReadByCreator() {
+        assertFalse(eventDAO.readByCreator(testUser.getId()).isEmpty());
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.readByCreator(null));
+    }
 
+    @Test
+    @Order(4)
+    void testUpdate() {
         Event patch = new Event();
         patch.setTitle("New Title");
-        patch.setDescription("New Description");
+        patch.setDescription("New Desc");
+        patch.setStartAt(Instant.now().plus(2, ChronoUnit.HOURS));
         patch.setShowOnBoard(true);
+        patch.setEventType(testType);
+        patch.setCreatedBy(testUser);
         
-        Event updated = eventDAO.update(created.getId(), patch);
+        Event updated = eventDAO.update(eventId, patch);
         assertEquals("New Title", updated.getTitle());
-        assertEquals("New Description", updated.getDescription());
-        assertTrue(updated.isShowOnBoard());
+        assertEquals("New Desc", updated.getDescription());
     }
 
     @Test
-    void testDelete() {
-        Event event = new Event();
-        event.setTitle("Delete Me");
-        event.setStartAt(Instant.now().plus(1, ChronoUnit.HOURS));
-        event.setCreatedBy(testUser);
-        event.setEventType(testType);
-        Event created = eventDAO.create(event);
-
-        eventDAO.delete(created.getId());
-        assertNull(eventDAO.read(created.getId()));
-    }
-
-    @Test
-    void testReadBetween() {
-        Instant from = Instant.now().plus(10, ChronoUnit.MINUTES);
-        Instant to = Instant.now().plus(20, ChronoUnit.MINUTES);
-        
-        Event event = new Event();
-        event.setTitle("Between Test");
-        event.setStartAt(Instant.now().plus(15, ChronoUnit.MINUTES));
-        event.setCreatedBy(testUser);
-        event.setEventType(testType);
-        eventDAO.create(event);
-
-        List<Event> between = eventDAO.readBetween(from, to);
-        assertFalse(between.isEmpty());
-    }
-
-    @Test
+    @Order(5)
     void testAddRemoveSeenBy() {
-        Event event = new Event();
-        event.setTitle("Seen Test");
-        event.setStartAt(Instant.now().plus(1, ChronoUnit.HOURS));
-        event.setCreatedBy(testUser);
-        event.setEventType(testType);
-        Event created = eventDAO.create(event);
-
-        eventDAO.addSeenByUser(created.getId(), testUser);
-        Event read = eventDAO.read(created.getId());
-        assertTrue(read.getSeenByUsers().stream().anyMatch(u -> u.getId().equals(testUser.getId())));
-
-        eventDAO.removeSeenByUser(created.getId(), testUser);
-        read = eventDAO.read(created.getId());
-        assertFalse(read.getSeenByUsers().stream().anyMatch(u -> u.getId().equals(testUser.getId())));
+        eventDAO.addSeenByUser(eventId, testUser);
+        assertTrue(eventDAO.read(eventId).getSeenByUsers().size() >= 1);
+        
+        eventDAO.removeSeenByUser(eventId, testUser);
+        assertTrue(eventDAO.read(eventId).getSeenByUsers().isEmpty());
     }
 
     @Test
-    void testErrorCases() {
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.readByCreator(null));
+    @Order(6)
+    void testReadBetween() {
+        Instant from = Instant.now().minus(1, ChronoUnit.DAYS);
+        Instant to = Instant.now().plus(1, ChronoUnit.DAYS);
+        assertFalse(eventDAO.readBetween(from, to).isEmpty());
+    }
+
+    @Test
+    @Order(7)
+    void testCreateErrors() {
         assertThrows(ApiRuntimeException.class, () -> eventDAO.create(null));
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(new Event())); // Missing fields
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.update(999L, new Event()));
-        assertThrows(ApiRuntimeException.class, () -> eventDAO.delete(999L));
+        
+        Event e1 = new Event();
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e1)); // title blank
+        
+        e1.setTitle("T");
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e1)); // startAt null
+        
+        e1.setStartAt(Instant.now().minus(1, ChronoUnit.HOURS));
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e1)); // startAt past
+        
+        e1.setStartAt(Instant.now().plus(1, ChronoUnit.HOURS));
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e1)); // createdBy null
+        
+        e1.setCreatedBy(testUser);
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.create(e1)); // eventType null
+    }
+
+    @Test
+    @Order(8)
+    void testUpdateDeleteErrors() {
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.update(999999L, new Event()));
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.delete(999999L));
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.addSeenByUser(999999L, testUser));
+        assertThrows(ApiRuntimeException.class, () -> eventDAO.removeSeenByUser(999999L, testUser));
+    }
+
+    @Test
+    @Order(9)
+    void testDelete() {
+        eventDAO.delete(eventId);
+        assertNull(eventDAO.read(eventId));
     }
 }

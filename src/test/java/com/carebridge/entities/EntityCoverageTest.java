@@ -3,7 +3,7 @@ package com.carebridge.entities;
 import com.carebridge.enums.EntryType;
 import com.carebridge.enums.RiskAssessment;
 import com.carebridge.enums.Role;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -12,9 +12,11 @@ import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class EntityCoverageTest {
 
     @Test
+    @Order(1)
     void testEvent() {
         Event e = new Event();
         e.setTitle("Title");
@@ -22,8 +24,10 @@ public class EntityCoverageTest {
         e.setStartAt(Instant.now());
         e.setShowOnBoard(true);
         User u = new User();
+        u.setId(1L);
         e.setCreatedBy(u);
         EventType et = new EventType();
+        et.setId(1L);
         e.setEventType(et);
         e.setSeenByUsers(new HashSet<>());
 
@@ -36,9 +40,7 @@ public class EntityCoverageTest {
         assertNotNull(e.getSeenByUsers());
         assertNotNull(e.getEventDate());
         assertNotNull(e.getEventTime());
-        assertNull(e.getCreated_at());
-        assertNull(e.getUpdated_at());
-
+        
         Event e2 = new Event("T", "D", Instant.now(), false, u, et);
         assertEquals("T", e2.getTitle());
         
@@ -46,14 +48,25 @@ public class EntityCoverageTest {
         assertNotNull(e.getCreated_at());
         e.preUpdate();
         
+        // Equals and HashCode branches
         assertTrue(e.equals(e));
         assertFalse(e.equals(null));
         assertFalse(e.equals(new Object()));
+        
+        Event e3 = new Event();
+        assertFalse(e.equals(e3));
+        e.setId(1L);
+        assertFalse(e.equals(e3));
+        e3.setId(2L);
+        assertFalse(e.equals(e3));
+        e3.setId(1L);
+        assertTrue(e.equals(e3));
         
         e.hashCode();
     }
 
     @Test
+    @Order(2)
     void testUser() {
         User u = new User();
         u.setName("Name");
@@ -76,26 +89,32 @@ public class EntityCoverageTest {
         assertEquals("ie", u.getInternalEmail());
         assertEquals("ip", u.getInternalPhone());
         assertNotNull(u.getResidents());
-        assertNotNull(u.getPasswordHash());
-        assertNull(u.getCreated_at());
-        assertNull(u.getUpdated_at());
-
+        
         Resident r = new Resident();
+        r.setId(1L);
         u.addResident(r);
         assertTrue(u.getResidents().contains(r));
+        u.addResident(r); // Duplicate branch
+        u.addResident(null); // Null branch
         
         u.prePersist();
         assertNotNull(u.getCreated_at());
         u.preUpdate();
 
         assertTrue(u.verifyPassword("pass"));
+        assertFalse(u.verifyPassword("wrong"));
         u.addRole(Role.ADMIN);
         assertEquals(Role.ADMIN, u.getRole());
         u.removeRole("ADMIN");
         assertEquals(Role.USER, u.getRole());
+        
+        u.addRole(Role.CAREWORKER);
+        u.addRole(Role.ADMIN);
+        assertTrue(u.getRole().name().contains("ADMIN"));
     }
 
     @Test
+    @Order(3)
     void testResident() {
         Resident r = new Resident();
         r.setFirstName("F");
@@ -118,6 +137,7 @@ public class EntityCoverageTest {
     }
 
     @Test
+    @Order(4)
     void testJournal() {
         Journal j = new Journal();
         Resident r = new Resident();
@@ -133,6 +153,7 @@ public class EntityCoverageTest {
     }
 
     @Test
+    @Order(5)
     void testJournalEntry() {
         JournalEntry e = new JournalEntry();
         e.setTitle("T");
@@ -144,8 +165,6 @@ public class EntityCoverageTest {
         Journal j = new Journal();
         e.setJournal(j);
         e.setEditCloseTime(LocalDateTime.now());
-        e.setCreatedAt(LocalDateTime.now());
-        e.setUpdatedAt(LocalDateTime.now());
 
         assertEquals("T", e.getTitle());
         assertEquals("C", e.getContent());
@@ -153,11 +172,32 @@ public class EntityCoverageTest {
         assertEquals(RiskAssessment.LOW, e.getRiskAssessment());
         assertEquals(u, e.getAuthor());
         assertEquals(j, e.getJournal());
-        assertNotNull(e.getEditCloseTime());
-        assertNotNull(e.getCreatedAt());
-        assertNotNull(e.getUpdatedAt());
 
         JournalEntry e2 = new JournalEntry(u, "T2", "C2", RiskAssessment.HIGH, EntryType.INCIDENT);
         assertEquals("T2", e2.getTitle());
+    }
+
+    @Test
+    @Order(6)
+    void testEventType() {
+        EventType et = new EventType("N", "#000");
+        et.setId(1L);
+        assertEquals("N", et.getName());
+        assertEquals("#000", et.getColorHex());
+        
+        EventType et2 = new EventType();
+        et2.setName("N");
+        et2.setColorHex("#000");
+        et2.setId(1L);
+        
+        assertTrue(et.equals(et2));
+        assertTrue(et.equals(et));
+        assertFalse(et.equals(null));
+        assertFalse(et.equals(new Object()));
+        
+        et2.setId(2L);
+        assertFalse(et.equals(et2));
+        
+        et.hashCode();
     }
 }

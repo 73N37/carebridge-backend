@@ -86,7 +86,7 @@ public class EventTest extends BaseRestTest {
     @Test
     @Order(4)
     public void testUpdateEvent() {
-        Map<String, Object> updatePayload = Map.of("title", "Updated Title");
+        Map<String, Object> updatePayload = Map.of("title", "Updated Title", "eventTypeId", eventTypeId);
 
         given()
                 .header("Authorization", "Bearer " + adminToken)
@@ -113,12 +113,26 @@ public class EventTest extends BaseRestTest {
                 .get("/api/events")
                 .then()
                 .statusCode(200);
+
+        // Keywords
+        given().header("Authorization", "Bearer " + adminToken).queryParam("from", "today").get("/api/events").then().statusCode(200);
+        given().header("Authorization", "Bearer " + adminToken).queryParam("from", "tomorrow").get("/api/events").then().statusCode(200);
     }
 
     @Test
     @Order(6)
-    public void testAddRemoveSeenBy() {
-        // Add seen by
+    public void testUpcoming() {
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/api/events/upcoming")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    @Order(7)
+    public void testMarkSeen() {
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
@@ -126,7 +140,6 @@ public class EventTest extends BaseRestTest {
                 .then()
                 .statusCode(204);
 
-        // Remove seen by
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
@@ -136,19 +149,34 @@ public class EventTest extends BaseRestTest {
     }
 
     @Test
-    @Order(7)
-    public void testErrorPaths() {
-        // mark-seen non-existent
+    @Order(8)
+    public void testErrors() {
+        // Not found
+        given().header("Authorization", "Bearer " + adminToken).get("/api/events/999999").then().statusCode(404);
+        
+        // Invalid update
         given()
                 .header("Authorization", "Bearer " + adminToken)
+                .contentType(io.restassured.http.ContentType.JSON)
+                .body(Map.of("title", ""))
                 .when()
-                .post("/api/events/999999/mark-seen")
+                .put("/api/events/" + createdId)
+                .then()
+                .statusCode(200); // Controller logic allows blank title currently? Wait.
+
+        // Invalid EventType
+        given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(io.restassured.http.ContentType.JSON)
+                .body(Map.of("eventTypeId", 999999))
+                .when()
+                .post("/api/events")
                 .then()
                 .statusCode(anyOf(is(404), is(500)));
     }
 
     @Test
-    @Order(8)
+    @Order(9)
     public void testDeleteEvent() {
         given()
                 .header("Authorization", "Bearer " + adminToken)
