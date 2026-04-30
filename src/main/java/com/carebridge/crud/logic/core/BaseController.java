@@ -78,7 +78,8 @@ public class BaseController<T extends BaseEntity> {
     public T create(Map<String, Object> body) {
         T entity = mappingService.toEntity(body, entityClass);
         if (entity.getId() != null) {
-            throw new RuntimeException("Entity already has an ID. Use update instead.");
+            throw new RuntimeException(
+                    "Cannot create entity with existing ID: " + entity.getId() + ". Use update endpoint instead.");
         }
         interceptor.beforeCreate(entity);
         T saved = dao.create(entity);

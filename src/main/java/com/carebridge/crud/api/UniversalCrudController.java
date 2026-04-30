@@ -110,7 +110,7 @@ public class UniversalCrudController {
     private <T extends BaseEntity> BaseController<T> getControllerOrThrow(String resource) {
         ResourceMetadata<?> metadata = crudManager.getMetadata(resource);
         if (metadata == null) {
-            throw new RuntimeException("Resource not found: " + resource);
+            throw new RuntimeException("Resource not found for path: " + resource);
         }
         return (BaseController<T>) metadata.getController();
     }

@@ -50,7 +50,8 @@ public class BaseDAO<T extends BaseEntity> implements IDAO<T, Long> {
     public T update(Long id, T entity) {
         T existing = em.find(entityClass, id);
         if (existing == null) {
-            throw new RuntimeException("Entity not found with id: " + id);
+            throw new RuntimeException(
+                    "Entity of type " + entityClass.getSimpleName() + " not found with id: " + id);
         }
         entity.setId(id);
         return em.merge(entity);
