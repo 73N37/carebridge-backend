@@ -27,7 +27,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleRuntime(RuntimeException ex) {
         String msg = ex.getMessage() != null ? ex.getMessage() : "Internal Server Error";
-        if (msg.toLowerCase().contains("not found") || msg.toLowerCase().contains("resource not found")) {
+        if (msg.toLowerCase().contains("not found")) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", msg));
         }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", msg));
