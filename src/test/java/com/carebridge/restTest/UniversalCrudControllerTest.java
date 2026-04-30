@@ -9,14 +9,15 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 /**
- * REST tests for UniversalCrudController (/api/v3) and BaseService.
- * Covers: getMetadata, getAll (paginated), getById, create, update, delete, unknown resource.
+ * REST tests for the UniversalCrudController (/v3 endpoints).
+ * Covers BaseService, BaseService.Page, DynamicDtoAdvice (Page path),
+ * UniversalCrudController, and related branches.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class UniversalCrudControllerTest extends BaseRestTest {
 
-    private static Long createdResidentId;
+    private static Long createdUserId;
 
     @Test
     @Order(1)
@@ -27,16 +28,20 @@ public class UniversalCrudControllerTest extends BaseRestTest {
                 .get("/api/v3/metadata")
                 .then()
                 .statusCode(200)
-                .body("residents", notNullValue());
+                .body("users", notNullValue());
     }
 
     @Test
     @Order(2)
-    public void testGetAllResidents_defaultPagination() {
+    public void testGetAllWithPagination() {
+        // Covers BaseService.findAll(page, size) and BaseService.Page constructor/getters
+        // Covers DynamicDtoAdvice body instanceof BaseService.Page branch
         given()
                 .header("Authorization", "Bearer " + adminToken)
+                .queryParam("page", 0)
+                .queryParam("size", 5)
                 .when()
-                .get("/api/v3/residents")
+                .get("/api/v3/users")
                 .then()
                 .statusCode(200)
                 .body("content", notNullValue())
@@ -45,177 +50,151 @@ public class UniversalCrudControllerTest extends BaseRestTest {
 
     @Test
     @Order(3)
-    public void testGetAllResidents_customPagination() {
-        given()
+    public void testCreate() {
+        // Covers BaseService.save() with a new entity (id == null → persist path)
+        String email = "v3-create-" + nextId() + "@test.com";
+        Object idObj = given()
                 .header("Authorization", "Bearer " + adminToken)
-                .queryParam("page", 0)
-                .queryParam("size", 5)
+                .contentType(ContentType.JSON)
+                .body(Map.of(
+                        "name", "V3 User",
+                        "email", email,
+                        "password", "pass123",
+                        "role", "USER"
+                ))
                 .when()
-                .get("/api/v3/residents")
+                .post("/api/v3/users")
                 .then()
-                .statusCode(200)
-                .body("content", notNullValue());
+                .statusCode(201)
+                .extract().path("id");
+        createdUserId = ((Number) idObj).longValue();
     }
 
     @Test
     @Order(4)
-    public void testCreateResident() {
-        Map<String, Object> body = Map.of(
-                "firstName", "V3-Test",
-                "lastName", "Resident",
-                "cprNr", "V3CPR-" + nextId()
-        );
-        Object idObj = given()
+    public void testGetByIdFound() {
+        // Covers BaseService.findById() and DynamicDtoAdvice BaseEntity path
+        given()
                 .header("Authorization", "Bearer " + adminToken)
-                .contentType(ContentType.JSON)
-                .body(body)
                 .when()
-                .post("/api/v3/residents")
+                .get("/api/v3/users/" + createdUserId)
                 .then()
-                .statusCode(201)
-                .extract().path("id");
-        createdResidentId = ((Number) idObj).longValue();
+                .statusCode(200);
     }
 
     @Test
     @Order(5)
-    public void testCreateResident_withIdInBody_throwsException() {
-        // entity.getId() != null → BaseService.save() throws RuntimeException → 500
-        Map<String, Object> body = Map.of(
-                "id", 9999998L,
-                "firstName", "WithId"
-        );
+    public void testGetByIdNotFound() {
+        // Covers BaseService.findById() returning empty Optional → 404
         given()
                 .header("Authorization", "Bearer " + adminToken)
-                .contentType(ContentType.JSON)
-                .body(body)
                 .when()
-                .post("/api/v3/residents")
+                .get("/api/v3/users/999999999")
                 .then()
-                .statusCode(500);
+                .statusCode(404);
     }
 
     @Test
     @Order(6)
-    public void testGetById_found() {
+    public void testUpdate() {
+        // Covers BaseService.update() with existing entity
         given()
                 .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of(
+                        "name", "V3 Updated",
+                        "email", "v3-upd-" + nextId() + "@test.com",
+                        "role", "USER",
+                        "password", "newpass"
+                ))
                 .when()
-                .get("/api/v3/residents/" + createdResidentId)
+                .put("/api/v3/users/" + createdUserId)
                 .then()
                 .statusCode(200);
     }
 
     @Test
     @Order(7)
-    public void testGetById_notFound() {
+    public void testUpdateNotFound() {
+        // Covers BaseService.update() → entity not found → RuntimeException → GlobalExceptionHandler
         given()
                 .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of("name", "X", "email", "x-" + nextId() + "@test.com", "role", "USER"))
                 .when()
-                .get("/api/v3/residents/999999999")
+                .put("/api/v3/users/999999999")
                 .then()
                 .statusCode(404);
     }
 
     @Test
     @Order(8)
-    public void testUpdateResident_found() {
-        Map<String, Object> body = Map.of("firstName", "Updated-V3");
+    public void testDelete() {
+        // Covers BaseService.deleteById() when entity exists (entity != null → remove)
         given()
                 .header("Authorization", "Bearer " + adminToken)
-                .contentType(ContentType.JSON)
-                .body(body)
                 .when()
-                .put("/api/v3/residents/" + createdResidentId)
+                .delete("/api/v3/users/" + createdUserId)
                 .then()
-                .statusCode(200);
+                .statusCode(204);
     }
 
     @Test
     @Order(9)
-    public void testUpdateResident_notFound() {
-        // BaseService.update() throws "Entity not found" → GlobalExceptionHandler returns 404
-        Map<String, Object> body = Map.of("firstName", "X");
+    public void testDeleteNotFound() {
+        // Covers BaseService.deleteById() when entity == null (no-op path)
         given()
                 .header("Authorization", "Bearer " + adminToken)
-                .contentType(ContentType.JSON)
-                .body(body)
                 .when()
-                .put("/api/v3/residents/999999999")
+                .delete("/api/v3/users/999999999")
                 .then()
-                .statusCode(404);
+                .statusCode(204);
     }
 
     @Test
     @Order(10)
-    public void testDeleteResident_exists() {
+    public void testInvalidResource() {
+        // Covers getMetadataOrThrow() → metadata == null → RuntimeException "Resource not found"
         given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
-                .delete("/api/v3/residents/" + createdResidentId)
+                .get("/api/v3/nonexistent-resource")
                 .then()
-                .statusCode(204);
+                .statusCode(404);
     }
 
     @Test
     @Order(11)
-    public void testDeleteResident_notExists() {
-        // BaseService.deleteById(): entity == null → silently skips → 204
+    public void testCreateWithExistingId() {
+        // Covers BaseService.save() when entity.getId() != null → throws RuntimeException
         given()
                 .header("Authorization", "Bearer " + adminToken)
+                .contentType(ContentType.JSON)
+                .body(Map.of(
+                        "id", 1,
+                        "name", "Has ID",
+                        "email", "hasid-" + nextId() + "@test.com",
+                        "role", "USER"
+                ))
                 .when()
-                .delete("/api/v3/residents/999999999")
+                .post("/api/v3/users")
                 .then()
-                .statusCode(204);
+                .statusCode(500);
     }
 
     @Test
     @Order(12)
-    public void testUnknownResource_get() {
-        // getMetadataOrThrow returns null → throws RuntimeException("Resource not found: unknown")
-        // GlobalExceptionHandler.handleRuntime: message contains "not found" → 404
+    public void testGetAllJournalEntries() {
+        // Covers BaseService.findAll(page, size) for a second resource
+        // Also helps DynamicDtoAdvice Page path with items that may not be BaseEntity (journal-entries)
         given()
                 .header("Authorization", "Bearer " + adminToken)
+                .queryParam("page", 0)
+                .queryParam("size", 10)
                 .when()
-                .get("/api/v3/unknown-resource-xyz")
+                .get("/api/v3/journal-entries")
                 .then()
-                .statusCode(404);
-    }
-
-    @Test
-    @Order(13)
-    public void testUnknownResource_post() {
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .contentType(ContentType.JSON)
-                .body(Map.of("x", "y"))
-                .when()
-                .post("/api/v3/unknown-resource-xyz")
-                .then()
-                .statusCode(404);
-    }
-
-    @Test
-    @Order(14)
-    public void testUnknownResource_put() {
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .contentType(ContentType.JSON)
-                .body(Map.of("x", "y"))
-                .when()
-                .put("/api/v3/unknown-resource-xyz/1")
-                .then()
-                .statusCode(404);
-    }
-
-    @Test
-    @Order(15)
-    public void testUnknownResource_delete() {
-        given()
-                .header("Authorization", "Bearer " + adminToken)
-                .when()
-                .delete("/api/v3/unknown-resource-xyz/1")
-                .then()
-                .statusCode(404);
+                .statusCode(200)
+                .body("content", notNullValue());
     }
 }

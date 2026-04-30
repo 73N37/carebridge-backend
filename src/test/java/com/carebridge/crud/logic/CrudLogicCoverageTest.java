@@ -173,8 +173,11 @@ public class CrudLogicCoverageTest {
     @Order(14)
     void testDynamicDtoAdvice_beforeBodyWrite_pageWithNonEntityItems() {
         // BaseService.Page where content items are Maps (not BaseEntity)
-        List<Object> items = List.of(Map.of("key", "value"), Map.of("k2", "v2"));
-        BaseService.Page<Object> page = new BaseService.Page<>((List) items, 2L);
+        List<Map<String, Object>> items = List.of(
+                Map.of("key", (Object) "value"),
+                Map.of("k2", (Object) "v2")
+        );
+        BaseService.Page<Map<String, Object>> page = new BaseService.Page<>(items, 2L);
         Object result = dynamicDtoAdvice.beforeBodyWrite(page, null, MediaType.APPLICATION_JSON, null, null, null);
         assertNotNull(result);
         assertInstanceOf(Map.class, result);

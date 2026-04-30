@@ -9,7 +9,6 @@ import org.junit.jupiter.api.*;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.*;
 
 /**
  * Covers missed branches in JournalEntryController, ResidentController that are not

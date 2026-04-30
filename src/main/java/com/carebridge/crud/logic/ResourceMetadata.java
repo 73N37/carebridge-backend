@@ -1,7 +1,9 @@
 package com.carebridge.crud.logic;
 
+import com.carebridge.crud.data.core.BaseDAO;
 import com.carebridge.crud.data.core.BaseEntity;
 import com.carebridge.crud.data.core.GenericRepository;
+import com.carebridge.crud.logic.core.BaseController;
 import com.carebridge.crud.logic.core.BaseService;
 import com.carebridge.crud.logic.core.CrudInterceptor;
 
@@ -17,6 +19,8 @@ public class ResourceMetadata<T extends BaseEntity> {
     private final String                basePath;
     private final GenericRepository<T>  repository;
     private final BaseService<T>        service;
+    private final BaseDAO<T>            dao;
+    private final BaseController<T>     controller;
     private final CrudInterceptor<T>    interceptor;
     private final List<FieldInfo>       fields;
 
@@ -25,6 +29,8 @@ public class ResourceMetadata<T extends BaseEntity> {
         this.basePath =     builder.basePath;
         this.repository =   builder.repository;
         this.service =      builder.service;
+        this.dao =          builder.dao;
+        this.controller =   builder.controller;
         this.interceptor =  builder.interceptor;
         this.fields =       builder.fields;
     }
@@ -37,6 +43,8 @@ public class ResourceMetadata<T extends BaseEntity> {
     public String getBasePath()                 { return basePath; }
     public GenericRepository<T> getRepository() { return repository; }
     public BaseService<T> getService()          { return service; }
+    public BaseDAO<T> getDao()                  { return dao; }
+    public BaseController<T> getController()    { return controller; }
     public CrudInterceptor<T> getInterceptor()  { return interceptor; }
     public List<FieldInfo> getFields()          { return fields; }
 
@@ -70,6 +78,8 @@ public class ResourceMetadata<T extends BaseEntity> {
         private String                  basePath;
         private GenericRepository<T>    repository;
         private BaseService<T>          service;
+        private BaseDAO<T>              dao;
+        private BaseController<T>       controller;
         private CrudInterceptor<T>      interceptor;
         private List<FieldInfo>         fields;
 
@@ -90,6 +100,16 @@ public class ResourceMetadata<T extends BaseEntity> {
 
         public Builder<T> service(BaseService<T> service) {
             this.service = service;
+            return this;
+        }
+
+        public Builder<T> dao(BaseDAO<T> dao) {
+            this.dao = dao;
+            return this;
+        }
+
+        public Builder<T> controller(BaseController<T> controller) {
+            this.controller = controller;
             return this;
         }
 
