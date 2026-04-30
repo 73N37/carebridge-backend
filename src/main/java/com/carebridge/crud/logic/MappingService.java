@@ -4,8 +4,6 @@ import com.carebridge.crud.annotations.ExcludeFromDTO;
 import com.carebridge.crud.data.core.BaseEntity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hibernate.Hibernate;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Field;
@@ -19,7 +17,6 @@ import java.util.*;
 @Service
 public class MappingService {
 
-    private static final Logger log = LoggerFactory.getLogger(MappingService.class);
     private final ObjectMapper objectMapper;
 
     public MappingService(ObjectMapper objectMapper) {
@@ -35,7 +32,7 @@ public class MappingService {
         Map<String, Object> result = new LinkedHashMap<>();
         Class<?> current = entity.getClass();
         
-        while (current != null && current != Object.class) {
+        while (current != Object.class) {
             for (Field field : current.getDeclaredFields()) {
                 // 🔒 Security: Skip fields marked with @ExcludeFromDTO
                 if (field.isAnnotationPresent(ExcludeFromDTO.class)) {
@@ -77,8 +74,8 @@ public class MappingService {
                         // Standard field (String, Long, Instant, etc.)
                         result.put(field.getName(), value);
                     }
-                } catch (IllegalAccessException e) {
-                    log.warn("Could not access field {} on {}", field.getName(), entity.getClass().getSimpleName());
+                } catch (IllegalAccessException ignored) {
+                    continue;
                 }
             }
             current = current.getSuperclass();
