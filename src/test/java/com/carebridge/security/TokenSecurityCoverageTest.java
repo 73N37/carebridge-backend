@@ -51,7 +51,7 @@ public class TokenSecurityCoverageTest {
     }
 
     @Test
-    @Order(3)
+    @Order(4)
     void testTokenCreationException_message() {
         TokenCreationException ex = new TokenCreationException("test-msg", new RuntimeException("cause"));
         assertEquals("test-msg", ex.getMessage());
@@ -59,7 +59,7 @@ public class TokenSecurityCoverageTest {
     }
 
     @Test
-    @Order(4)
+    @Order(5)
     void testTokenVerificationException_message() {
         TokenVerificationException ex = new TokenVerificationException("verify-msg", new RuntimeException("cause"));
         assertEquals("verify-msg", ex.getMessage());
