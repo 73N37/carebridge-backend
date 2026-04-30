@@ -2,8 +2,10 @@ package com.carebridge.crud.logic;
 
 import com.carebridge.crud.annotations.CrudResource;
 import com.carebridge.crud.annotations.ExcludeFromMeta;
+import com.carebridge.crud.data.core.BaseDAO;
 import com.carebridge.crud.data.core.BaseEntity;
 import com.carebridge.crud.data.core.GenericRepository;
+import com.carebridge.crud.logic.core.BaseController;
 import com.carebridge.crud.logic.core.BaseService;
 import com.carebridge.crud.logic.core.CrudInterceptor;
 import jakarta.annotation.PostConstruct;
@@ -18,6 +20,7 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
@@ -34,9 +37,12 @@ public class DynamicCrudManager {
     private static final Logger log = LoggerFactory.getLogger(DynamicCrudManager.class);
     private final Map<String, ResourceMetadata<?>> resources = new HashMap<>();
     private final Map<Class<?>, CrudInterceptor<?>> interceptors = new HashMap<>();
-    
+
     @PersistenceContext
     private EntityManager entityManager;
+
+    @Autowired
+    private MappingService mappingService;
 
     public DynamicCrudManager() {
     }
@@ -96,7 +102,14 @@ public class DynamicCrudManager {
         // Standard Generic Service
         BaseService<T> service = new BaseService<>(entityClass, entityManager);
 
+        // Auto-generated BaseDAO for this entity
+        BaseDAO<T> dao = new BaseDAO<>(entityClass, entityManager);
+
         CrudInterceptor<T> interceptor = (CrudInterceptor<T>) interceptors.getOrDefault(entityClass, new CrudInterceptor<T>() {});
+
+        // Auto-generated BaseController for this entity
+        BaseController<T> controller = new BaseController<>(entityClass, dao, entityManager, mappingService, interceptor);
+
         List<ResourceMetadata.FieldInfo> fieldMetadata = inspectFields(inspectionClass);
 
         ResourceMetadata<T> metadata = ResourceMetadata.<T>builder()
@@ -104,6 +117,8 @@ public class DynamicCrudManager {
                 .basePath(path)
                 .repository(repository)
                 .service(service)
+                .dao(dao)
+                .controller(controller)
                 .interceptor(interceptor)
                 .fields(fieldMetadata)
                 .build();
